@@ -1,0 +1,68 @@
+<%= _.render('inc/head', obj) %>
+<%= _.render('inc/page_top', obj) %>
+<script src="//tinymce.cachefly.net/4.2/tinymce.min.js"></script>
+<script>tinymce.init({
+	'selector': 'textarea',
+	'toolbar': 'undo redo | bold italic underline strikethrough | subscript superscript | link unlink | removeformat',
+	'menubar': false,
+	'plugins': 'link'
+});</script>
+<form method="post">
+
+	<%= _.render('inc/adminBlogpostEditControls', obj) %>
+
+	<fieldset>
+		<legend>Identity</legend>
+
+		<div class="row">
+			<div class="three columns">
+				<label for="id">Id</label>
+				<input type="text" value="<%= global.urlParsed.query.id %>" disabled="disabled" />
+			</div>
+
+			<div class="three columns">
+				<label for="created">Created</label>
+				<input type="text" value="<% if (global.formFields.created) print(_.moment(global.formFields.created).format('YYYY-MM-DD HH:mm:ss')) %>" disabled="disabled" />
+			</div>
+
+			<div class="three columns">
+				<label for="published">Published</label>
+				<input type="text" value="<%
+					if (global.formFields.published)
+						print(_.moment(global.formFields.published).format('YYYY-MM-DD HH:mm:ss'));
+					else if ( ! global.urlParsed.query.id)
+						print(_.moment().format('YYYY-MM-DD HH:mm:ss'));
+				%>" placeholder="YYYY-MM-DD hh:mm:ss" />
+			</div>
+		</div>
+	</fieldset>
+
+	<% if ( ! global.urlParsed.query.langs) global.urlParsed.query.langs = 'en'; %>
+
+	<% _.each(global.urlParsed.query.langs.split(','), function(lang) { %>
+	<fieldset>
+		<legend>Entry content, language: <%= lang %></legend>
+
+		<div class="row">
+			<div class="six columns">
+				<label for="header">Header</label>
+				<input type="text" name="header[<%= lang %>]" value="<% if (global.formFields.header) global.formFields.header[lang] %>" />
+			</div>
+
+			<div class="six columns">
+				<label for="slug">Slug</label>
+				<input type="text" name="slug[<%= lang %>]" value="<% if (global.formFields.slug) global.formFields.slug[lang] %>" />
+			</div>
+		</div>
+
+		<div class="row">
+			<label for="body">Entry content</label>
+			<textarea class="u-full-width" name="body[<%= lang %>]" rows="20"><% if (global.formFields.body) global.formFields.body[lang] %></textarea>
+		</div>
+	</fieldset>
+	<% }); %>
+
+	<%= _.render('inc/adminBlogpostEditControls', obj) %>
+
+</form>
+<%= _.render('inc/pageBottom', obj) %>
