@@ -29,7 +29,7 @@
 		"url": "https://github.com/larvit/larvitblog",
 		"type": "git"
 	},
-	"version": "0.0.1",
+	"version": "0.0.1-rc1",
 	"readmeFilename": "README.md",
 	"bugs": {
 		"url": "https://github.com/larvit/larvitblog/issues"
