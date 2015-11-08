@@ -31,13 +31,16 @@ function createTablesIfNotExists(cb) {
 		});
 	});
 }
-createTablesIfNotExists();
+createTablesIfNotExists(function(err) {
+	log.error('larvitblog: createTablesIfNotExists() - Database error: ' + err.message);
+});
 
 /**
  * Get blog entries
  *
  * @param obj options - { // All options are optional!
  *                        'langs': ['sv', 'en'],
+ *                        'slugs': ['blu', 'bla'],
  *                        'publishedAfter': dateObj,
  *                        'ids': [32,4],
  *                        'limit': 10,
@@ -59,11 +62,16 @@ function getEntries(options, cb) {
 
 	log.debug('larvitblog: getEntries() - Called with options: "' + JSON.stringify(options) + '"');
 
+	// Make sure options that should be arrays actually are arrays
+	// This will simplify our lives in the SQL builder below
 	if (options.langs !== undefined && ! (options.langs instanceof Array))
 		options.langs = [options.langs];
 
 	if (options.ids !== undefined && ! (options.ids instanceof Array))
 		options.ids = [options.ids];
+
+	if (options.slugs !== undefined && ! (options.slugs instanceof Array))
+		options.slugs = [options.slugs];
 
 	// Make sure there is an invalid ID in the id list if it is empty
 	// Since the most logical thing to do is replying with an empty set
@@ -97,6 +105,21 @@ function getEntries(options, cb) {
 		while (options.langs[i] !== undefined) {
 			sql += '?,';
 			dbFields.push(options.langs[i]);
+
+			i ++;
+		}
+
+		sql = sql.substring(0, sql.length - 1) + ')\n';
+	}
+
+	// Only get posts with the current slugs
+	if (options.slugs !== undefined) {
+		sql += '	AND e.id IN (SELECT entryId FROM blog_entriesData WHERE slug IN (';
+
+		i = 0;
+		while (options.slugs[i] !== undefined) {
+			sql += '?,';
+			dbFields(options.slugs[i]);
 
 			i ++;
 		}
