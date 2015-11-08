@@ -27,7 +27,7 @@
 
 			<div class="three columns">
 				<label for="published">Published</label>
-				<input type="text" value="<%
+				<input type="text" name="published" value="<%
 					if (global.formFields.published)
 						print(_.moment(global.formFields.published).format('YYYY-MM-DD HH:mm:ss'));
 					else if ( ! global.urlParsed.query.id)
@@ -45,19 +45,19 @@
 
 		<div class="row">
 			<div class="six columns">
-				<label for="header">Header</label>
-				<input type="text" name="header[<%= lang %>]" value="<% if (global.formFields.header) global.formFields.header[lang] %>" />
+				<label for="header.<%= lang %>">Header</label>
+				<input type="text" name="header.<%= lang %>" value="<% if (global.formFields['header.' + lang]) print(global.formFields['header.' + lang]) %>" />
 			</div>
 
 			<div class="six columns">
-				<label for="slug">Slug</label>
-				<input type="text" name="slug[<%= lang %>]" value="<% if (global.formFields.slug) global.formFields.slug[lang] %>" />
+				<label for="slug.<%= lang %>">Slug</label>
+				<input type="text" name="slug.<%= lang %>" value="<% if (global.formFields['slug.' + lang]) print(global.formFields['slug.' + lang]) %>" />
 			</div>
 		</div>
 
 		<div class="row">
-			<label for="body">Entry content</label>
-			<textarea class="u-full-width" name="body[<%= lang %>]" rows="20"><% if (global.formFields.body) global.formFields.body[lang] %></textarea>
+			<label for="body.<%= lang %>">Entry content</label>
+			<textarea class="u-full-width" name="body.<%= lang %>" rows="20"><% if (global.formFields['body.' + lang]) print(global.formFields['body.' + lang]) %></textarea>
 		</div>
 	</fieldset>
 	<% }); %>

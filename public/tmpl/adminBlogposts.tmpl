@@ -17,7 +17,7 @@
 		if (entry.langs.en !== undefined) {
 			lang = 'en';
 		} else {
-			_.each(entry.langs, function(thisLang) {
+			_.each(entry.langs, function(data, thisLang) {
 				lang = thisLang;
 				return;
 			});
@@ -27,7 +27,7 @@
 			<td><a href="adminBlogpostEdit?langs=sv,en&id=<%= entry.id %>"><%= entry.id %></a></td>
 			<td><%= entry.langs[lang].header %></td>
 			<td><%= _.moment(entry.created).format('YYYY-MM-DD') %></td>
-			<td><% if (entry.published) print(_.moment(entry.published).format('YYYY-MM-DD')); else print('No'); %></td>
+			<td><% if (entry.published) print(_.moment(entry.published).format('YYYY-MM-DD HH:mm:ss')); else print('No'); %></td>
 		</tr>
 	<% }) %>
 	</tbody>

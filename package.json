@@ -7,6 +7,7 @@
 	"private": false,
 	"dependencies": {
 		"larvitadmingui": "latest",
+		"underscore.string": "latest",
 		"larvitdb": "latest",
 		"winston": "latest"
 	},

@@ -2,7 +2,9 @@
 
 var db           = require('larvitdb'),
     log          = require('winston'),
+    async        = require('async'),
     events       = require('events'),
+    slugify      = require('underscore.string/slugify'),
     eventEmitter = new events.EventEmitter(),
     dbChecked    = false;
 
@@ -17,7 +19,7 @@ function createTablesIfNotExists(cb) {
 			return;
 		}
 
-		sql = 'CREATE TABLE IF NOT EXISTS `blog_entriesData` (`entryId` int(10) unsigned NOT NULL, `lang` char(2) CHARACTER SET ascii NOT NULL, `header` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL, `body` text COLLATE utf8mb4_unicode_ci NOT NULL, `slug` varchar(255) CHARACTER SET ascii NOT NULL, PRIMARY KEY (`entryId`,`lang`), UNIQUE KEY `lang_slug` (`lang`,`slug`), CONSTRAINT `blog_entriesData_ibfk_1` FOREIGN KEY (`entryId`) REFERENCES `blog_entries` (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;';
+		sql = 'CREATE TABLE IF NOT EXISTS `blog_entriesData` (`entryId` int(10) unsigned NOT NULL, `lang` char(2) CHARACTER SET ascii NOT NULL, `header` varchar(191) COLLATE utf8mb4_unicode_ci, `body` text COLLATE utf8mb4_unicode_ci, `slug` varchar(255) CHARACTER SET ascii, PRIMARY KEY (`entryId`,`lang`), UNIQUE KEY `lang_slug` (`lang`,`slug`), CONSTRAINT `blog_entriesData_ibfk_1` FOREIGN KEY (`entryId`) REFERENCES `blog_entries` (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;';
 		db.query(sql, function(err) {
 			if (err) {
 				cb(err);
@@ -43,7 +45,7 @@ createTablesIfNotExists();
  *                      }
  * @param func cb - callback(err, entries)
  */
-exports.getEntries = function(options, cb) {
+function getEntries(options, cb) {
 	var tmpEntries = {},
 	    dbFields   = [],
 	    entries    = [],
@@ -55,11 +57,18 @@ exports.getEntries = function(options, cb) {
 		options = {};
 	}
 
-	if (options.langs !== undefined && ! options.langs instanceof Array)
-		options.langs = [langs];
+	log.debug('larvitblog: getEntries() - Called with options: "' + JSON.stringify(options) + '"');
 
-	if (options.ids !== undefined && ! options.ids instanceof Array)
-		options.ids = [ids];
+	if (options.langs !== undefined && ! (options.langs instanceof Array))
+		options.langs = [options.langs];
+
+	if (options.ids !== undefined && ! (options.ids instanceof Array))
+		options.ids = [options.ids];
+
+	// Make sure there is an invalid ID in the id list if it is empty
+	// Since the most logical thing to do is replying with an empty set
+	if (options.ids instanceof Array && options.ids.length === 0)
+		options.ids.push(- 1);
 
 	if (options.limit === undefined)
 		options.limit = 10;
@@ -69,15 +78,15 @@ exports.getEntries = function(options, cb) {
 		log.debug('larvitblog: getEntries() - Database not checked, rerunning this method when event have been emitted.');
 		eventEmitter.on('checked', function() {
 			log.debug('larvitblog: getEntries() - Database check event received, rerunning getEntries().');
-			exports.getEntries(options, cb);
+			getEntries(options, cb);
 		});
 
 		return;
 	}
 
-	sql  = 'SELECT ed.*, e.created\n';
-	sql += 'FROM blog_entriesData ed\n';
-	sql += '	JOIN blog_entries e ON e.id = ed.entryId\n';
+	sql  = 'SELECT ed.*, e.id, e.created, e.published\n';
+	sql += 'FROM blog_entries e\n';
+	sql += '	LEFT JOIN blog_entriesData ed ON ed.entryId = e.id\n';
 	sql += 'WHERE 1 + 1\n';
 
 	// Only get post contents with selected languages
@@ -110,6 +119,12 @@ exports.getEntries = function(options, cb) {
 		sql = sql.substring(0, sql.length - 1) + ')\n';
 	}
 
+	// Only get posts published after a certain date
+	if (options.publishedAfter) {
+		sql += '	AND e.published > ?\n';
+		dbFields(options.publishedAfter);
+	}
+
 	sql += 'ORDER BY e.published DESC, ed.lang\n';
 	sql += 'LIMIT ' + parseInt(options.limit) + '\n';
 
@@ -127,15 +142,16 @@ exports.getEntries = function(options, cb) {
 
 		i = 0;
 		while (rows[i] !== undefined) {
-			if (tmpEntries[rows[i].entryId] === undefined) {
-				tmpEntries[rows[i].entryId] = {
-					'id': rows[i].entryId,
+			if (tmpEntries[rows[i].id] === undefined) {
+				tmpEntries[rows[i].id] = {
+					'id': rows[i].id,
 					'created': rows[i].created,
+					'published': rows[i].published,
 					'langs': {}
 				};
 			}
 
-			tmpEntries[rows[i].entryId].langs[rows[i].lang] = {
+			tmpEntries[rows[i].id].langs[rows[i].lang] = {
 				'header': rows[i].header,
 				'body': rows[i].body,
 				'slug': rows[i].slug
@@ -151,3 +167,140 @@ exports.getEntries = function(options, cb) {
 		cb(null, entries);
 	});
 };
+
+function rmEntry(id, cb) {
+	db.query('DELETE FROM blog_entriesData WHERE entryId = ?', [id], function(err) {
+		if (err) {
+			cb(err);
+			return;
+		}
+
+		db.query('DELETE FROM blog_entries WHERE id = ?', [id], cb);
+	});
+}
+
+/**
+ * Save an entry
+ *
+ * @param obj data - { // All options are optional!
+ *                     'id': 1323,
+ *                     'published': dateObj,
+ *                     'langs': {
+ *                       'en': {
+ *                         'header': 'foo',
+ *                         'slug': 'bar',
+ *                         'body': 'lots of foo and bars'
+ *                       },
+ *                       'sv' ...
+ *                     }
+ *                   }
+ * @param func cb(err, entry) - the entry will be a row from getEntries()
+ */
+function saveEntry(data, cb) {
+	var tasks = [],
+	    lang;
+
+	if (typeof data === 'function') {
+		cb   = data;
+		data = {};
+	}
+
+	log.verbose('larvitblog: saveEntry() - Running with data. "' + JSON.stringify(data) + '"');
+
+	// Make sure the database tables exists before going further!
+	if ( ! dbChecked) {
+		log.debug('larvitblog: saveEntry() - Database not checked, rerunning this method when event have been emitted.');
+		eventEmitter.on('checked', function() {
+			log.debug('larvitblog: saveEntry() - Database check event received, rerunning saveEntry().');
+			exports.saveEntry(data, cb);
+		});
+
+		return;
+	}
+
+	// Create a new post id is not set
+	if (data.id === undefined) {
+		tasks.push(function(cb) {
+			var sql      = 'INSERT INTO blog_entries (created',
+				  dbFields = [];
+
+			if (data.published)
+				sql += ', published';
+
+			sql += ') VALUES(NOW()';
+
+			if (data.published) {
+				sql += ',?';
+				dbFields.push(data.published);
+			}
+
+			sql += ');';
+
+			db.query(sql, dbFields, function(err, result) {
+				if (err) {
+					cb(err);
+					return;
+				}
+
+				log.debug('larvitblog: saveEntry() - New blog entry created with id: "' + result.insertId + '"');
+				data.id = result.insertId;
+				cb();
+			});
+		});
+	} else {
+		// Erase previous data
+		tasks.push(function(cb) {
+			db.query('DELETE FROM blog_entriesData WHERE entryId = ?', [parseInt(data.id)], cb);
+		});
+
+		// Set published
+		tasks.push(function(cb) {
+			var sql      = 'UPDATE blog_entries SET published = ? WHERE id = ?',
+			    dbFields = [data.published, data.id];
+
+			db.query(sql, dbFields, cb);
+		});
+	}
+
+	// We need to declare this outside the loop because of async operations
+	function addEntryData(lang, header, body, slug) {
+		tasks.push(function(cb) {
+			var sql      = 'INSERT INTO blog_entriesData (entryId, lang, header, body, slug) VALUES(?,?,?,?,?);',
+			    dbFields = [data.id, lang, header, body, slug];
+
+			db.query(sql, dbFields, cb);
+		});
+	}
+
+	// Add content data
+	if (data.langs) {
+		for (lang in data.langs) {
+			if (data.langs[lang].slug)
+				data.langs[lang].slug = slugify(data.langs[lang].slug);
+
+			if (data.langs[lang].header || data.langs[lang].body)
+				addEntryData(lang, data.langs[lang].header, data.langs[lang].body, data.langs[lang].slug);
+		}
+	}
+
+	async.series(tasks, function(err) {
+		if (err) {
+			cb(err);
+			return;
+		}
+
+		// Re-read this entry from the database to be sure to get the right deal!
+		getEntries({'ids': data.id}, function(err, entries) {
+			if (err) {
+				cb(err);
+				return;
+			}
+
+			cb(null, entries[0]);
+		});
+	});
+};
+
+exports.getEntries = getEntries;
+exports.rmEntry    = rmEntry;
+exports.saveEntry  = saveEntry;
