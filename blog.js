@@ -277,12 +277,14 @@ function saveEntry(data, cb) {
 		});
 
 		// Set published
-		tasks.push(function(cb) {
-			var sql      = 'UPDATE blog_entries SET published = ? WHERE id = ?',
-			    dbFields = [data.published, data.id];
+		if (data.published !== undefined) {
+			tasks.push(function(cb) {
+				var sql      = 'UPDATE blog_entries SET published = ? WHERE id = ?',
+				    dbFields = [data.published, data.id];
 
-			db.query(sql, dbFields, cb);
-		});
+				db.query(sql, dbFields, cb);
+			});
+		}
 	}
 
 	// We need to declare this outside the loop because of async operations
