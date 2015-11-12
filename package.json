@@ -6,7 +6,7 @@
 	},
 	"private": false,
 	"dependencies": {
-		"underscore.string": "latest",
+		"larvitslugify": "latest",
 		"larvitdb": "latest",
 		"winston": "latest"
 	},
@@ -28,7 +28,7 @@
 		"url": "https://github.com/larvit/larvitblog",
 		"type": "git"
 	},
-	"version": "0.0.1-rc3",
+	"version": "0.0.1-rc4",
 	"readmeFilename": "README.md",
 	"bugs": {
 		"url": "https://github.com/larvit/larvitblog/issues"
