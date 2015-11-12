@@ -119,7 +119,7 @@ function getEntries(options, cb) {
 		i = 0;
 		while (options.slugs[i] !== undefined) {
 			sql += '?,';
-			dbFields(options.slugs[i]);
+			dbFields.push(options.slugs[i]);
 
 			i ++;
 		}
@@ -144,8 +144,8 @@ function getEntries(options, cb) {
 
 	// Only get posts published after a certain date
 	if (options.publishedAfter) {
-		sql += '	AND e.published > ?\n';
-		dbFields(options.publishedAfter);
+		sql += '	AND e.published < ?\n';
+		dbFields.push(options.publishedAfter);
 	}
 
 	sql += 'ORDER BY e.published DESC, ed.lang\n';
