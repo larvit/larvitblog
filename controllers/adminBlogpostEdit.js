@@ -2,7 +2,8 @@
 
 var moment = require('moment'),
     async  = require('async'),
-    blog   = require('larvitblog');
+    blog   = require('larvitblog'),
+    _      = require('lodash');
 
 exports.run = function(req, res, callback) {
 	var data    = {'global': res.globalData},
@@ -46,10 +47,14 @@ exports.run = function(req, res, callback) {
 					if (saveObj.langs[lang] === undefined)
 						saveObj.langs[lang] = {};
 
-					if ( ! res.globalData.formFields[field])
+					if ( ! res.globalData.formFields[field]) {
 						saveObj.langs[lang][fieldName] = null;
-					else
+					} else {
+						if (fieldName === 'slug')
+							_.trimRight(res.globalData.formFields[field], '/');
+
 						saveObj.langs[lang][fieldName] = res.globalData.formFields[field];
+					}
 				}
 			}
 
