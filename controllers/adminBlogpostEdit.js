@@ -1,9 +1,10 @@
 'use strict';
 
-var moment = require('moment'),
-    async  = require('async'),
-    blog   = require('larvitblog'),
-    _      = require('lodash');
+var slugify = require('larvitslugify'),
+    moment  = require('moment'),
+    async   = require('async'),
+    blog    = require('larvitblog'),
+    _       = require('lodash');
 
 exports.run = function(req, res, callback) {
 	var data    = {'global': res.globalData},
@@ -28,6 +29,7 @@ exports.run = function(req, res, callback) {
 			if (entryId !== undefined)
 				saveObj.id = entryId;
 
+			// Define published
 			if (res.globalData.formFields.published) {
 				try {
 					saveObj.published = moment(res.globalData.formFields.published).toDate();
@@ -47,12 +49,18 @@ exports.run = function(req, res, callback) {
 					if (saveObj.langs[lang] === undefined)
 						saveObj.langs[lang] = {};
 
+					if (fieldName === 'slug') {
+						res.globalData.formFields[field] = _.trimRight(res.globalData.formFields[field], '/');
+
+						// Auto generate slug if it is not set
+						if (res.globalData.formFields[field] === '' && saveObj.published !== null && res.globalData.formFields['header.' + lang] !== '') {
+							res.globalData.formFields[field] = moment(saveObj.published).format('YYYY-MM-DD_') + slugify(res.globalData.formFields['header.' + lang], '-');
+						}
+					}
+
 					if ( ! res.globalData.formFields[field]) {
 						saveObj.langs[lang][fieldName] = null;
 					} else {
-						if (fieldName === 'slug')
-							_.trimRight(res.globalData.formFields[field], '/');
-
 						saveObj.langs[lang][fieldName] = res.globalData.formFields[field];
 					}
 				}
