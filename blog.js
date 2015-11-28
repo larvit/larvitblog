@@ -144,8 +144,8 @@ function getEntries(options, cb) {
 
 	// Only get posts published after a certain date
 	if (options.publishedAfter) {
-		sql += '	AND e.published < ?\n';
-		dbFields.push(options.publishedAfter);
+		sql += '	AND e.published > ?\n';
+		dbFields.push(new Date(options.publishedAfter));
 	}
 
 	sql += 'ORDER BY e.published DESC, ed.lang\n';
