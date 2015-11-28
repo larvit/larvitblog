@@ -124,7 +124,7 @@ function getEntries(options, cb) {
 			i ++;
 		}
 
-		sql = sql.substring(0, sql.length - 1) + ')\n';
+		sql = sql.substring(0, sql.length - 1) + '))\n';
 	}
 
 	// Only get posts with given ids
