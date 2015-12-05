@@ -8,6 +8,7 @@
 	"dependencies": {
 		"async": "~1.5",
 		"larvitdb": "~0.3",
+		"larvitdbmigration": "~0.2",
 		"larvitslugify": "~0.10",
 		"lodash": "~3.10",
 		"winston": "~2.1"

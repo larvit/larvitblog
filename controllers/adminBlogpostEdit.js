@@ -112,9 +112,11 @@ exports.run = function(req, res, callback) {
 					};
 
 					for (lang in rows[0].langs) {
-						res.globalData.formFields['header.' + lang] = rows[0].langs[lang].header;
-						res.globalData.formFields['slug.'   + lang] = rows[0].langs[lang].slug;
-						res.globalData.formFields['body.'   + lang] = rows[0].langs[lang].body;
+						res.globalData.formFields['header.'  + lang] = rows[0].langs[lang].header;
+						res.globalData.formFields['slug.'    + lang] = rows[0].langs[lang].slug;
+						res.globalData.formFields['summary.' + lang] = rows[0].langs[lang].summary;
+						res.globalData.formFields['body.'    + lang] = rows[0].langs[lang].body;
+						res.globalData.formFields['tags.'    + lang] = rows[0].langs[lang].tags;
 					}
 				} else {
 					cb(new Error('larvitblog: controllers/adminBlogpostEdit.js - Wrong entryId supplied'));

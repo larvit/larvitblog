@@ -3,10 +3,17 @@
 <script src="//tinymce.cachefly.net/4.2/tinymce.min.js"></script>
 <script>tinymce.init({
 	'selector': 'textarea',
-	'toolbar': 'undo redo | bold italic underline strikethrough | subscript superscript | link unlink | removeformat',
+	'toolbar': 'undo redo | bold italic underline strikethrough | bullist numlist | subscript superscript | link unlink | removeformat code',
 	'menubar': false,
-	'plugins': 'link',
-	'valid_elements': 'p,strong,a,em,span,sup,sub'
+	'plugins': 'link image code',
+	'valid_elements': 'ul,li,ol,br,p,strong,a[href|target],em,span,sup,sub'
+});</script>
+<link rel="stylesheet" type="text/css" href="vendor/css/jquery.tagit.css" />
+<script src="vendor/js/tag-it.min.js"></script>
+<script>$(function(){
+	$('.tagit').tagit({
+		'allowSpaces': true
+	});
 });</script>
 <form method="post">
 
@@ -57,8 +64,30 @@
 		</div>
 
 		<div class="row">
+			<label for="tags.<%= lang %>">Tags</label>
+			<input type="text" name="tags.<%= lang %>" value="<% if (global.formFields['tags.' + lang]) print(global.formFields['tags.' + lang]) %>" class="tagit" autocomplete="off" />
+		</div>
+
+		<div class="row">
+			<label for="body.<%= lang %>">Entry summary</label>
+			<textarea class="u-full-width" name="summary.<%= lang %>" rows="5"><% if (global.formFields['summary.' + lang]) print(global.formFields['summary.' + lang]) %></textarea>
+		</div>
+
+		<div class="row">
 			<label for="body.<%= lang %>">Entry content</label>
 			<textarea class="u-full-width" name="body.<%= lang %>" rows="20"><% if (global.formFields['body.' + lang]) print(global.formFields['body.' + lang]) %></textarea>
+		</div>
+
+		<div class="row">
+			<% var i = 0; %>
+			<% while (i < 5) { %>
+				<% i ++; %>
+
+				<div class="two columns">
+					<label for="image<%= i %>">Img <%= i %></label>
+					<input type="file" name="image<%= i %>" />
+				</div>
+			<% } %>
 		</div>
 	</fieldset>
 	<% }); %>

@@ -1,38 +1,24 @@
 'use strict';
 
-var db           = require('larvitdb'),
+var _            = require('lodash'),
+    db           = require('larvitdb'),
     log          = require('winston'),
     async        = require('async'),
     events       = require('events'),
     slugify      = require('larvitslugify'),
+    dbmigration  = require('larvitdbmigration')({'tableName': 'blog_db_version', 'migrationScriptsPath': __dirname + '/dbmigration'}),
     eventEmitter = new events.EventEmitter(),
     dbChecked    = false;
 
-// Create database tables if they are missing
-function createTablesIfNotExists(cb) {
-	var sql;
+// Handle database migrations
+dbmigration(function(err) {
+	if (err) {
+		log.error('larvitblog: createTablesIfNotExists() - Database error: ' + err.message);
+		return;
+	}
 
-	sql = 'CREATE TABLE IF NOT EXISTS `blog_entries` (`id` int(10) unsigned NOT NULL AUTO_INCREMENT, `created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `published` datetime DEFAULT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8;';
-	db.query(sql, function(err) {
-		if (err) {
-			cb(err);
-			return;
-		}
-
-		sql = 'CREATE TABLE IF NOT EXISTS `blog_entriesData` (`entryId` int(10) unsigned NOT NULL, `lang` char(2) CHARACTER SET ascii NOT NULL, `header` varchar(191) COLLATE utf8mb4_unicode_ci, `body` text COLLATE utf8mb4_unicode_ci, `slug` varchar(255) CHARACTER SET ascii, PRIMARY KEY (`entryId`,`lang`), UNIQUE KEY `lang_slug` (`lang`,`slug`), CONSTRAINT `blog_entriesData_ibfk_1` FOREIGN KEY (`entryId`) REFERENCES `blog_entries` (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;';
-		db.query(sql, function(err) {
-			if (err) {
-				cb(err);
-				return;
-			}
-
-			dbChecked = true;
-			eventEmitter.emit('checked');
-		});
-	});
-}
-createTablesIfNotExists(function(err) {
-	log.error('larvitblog: createTablesIfNotExists() - Database error: ' + err.message);
+	dbChecked = true;
+	eventEmitter.emit('checked');
 });
 
 /**
@@ -42,6 +28,7 @@ createTablesIfNotExists(function(err) {
  *                        'langs': ['sv', 'en'],
  *                        'slugs': ['blu', 'bla'],
  *                        'publishedAfter': dateObj,
+ *                        'publishedBefore': dateObj,
  *                        'ids': [32,4],
  *                        'limit': 10,
  *                        'offset': 20
@@ -92,9 +79,11 @@ function getEntries(options, cb) {
 		return;
 	}
 
-	sql  = 'SELECT ed.*, e.id, e.created, e.published\n';
+	sql  = 'SELECT ed.*, e.id, e.created, e.published, GROUP_CONCAT(t.content) AS tags, GROUP_CONCAT(i.uri) AS images\n';
 	sql += 'FROM blog_entries e\n';
-	sql += '	LEFT JOIN blog_entriesData ed ON ed.entryId = e.id\n';
+	sql += '	LEFT JOIN blog_entriesData       ed ON ed.entryId = e.id\n';
+	sql += '	LEFT JOIN blog_entriesDataTags   t  ON t.entryId  = e.id AND t.lang = ed.lang\n';
+	sql += '	LEFT JOIN blog_entriesDataImages i  ON i.entryId  = e.id\n';
 	sql += 'WHERE 1 + 1\n';
 
 	// Only get post contents with selected languages
@@ -148,6 +137,13 @@ function getEntries(options, cb) {
 		dbFields.push(new Date(options.publishedAfter));
 	}
 
+	// Only get posts published before a certain date
+	if (options.publishedBefore) {
+		sql += '	AND e.published < ?\n';
+		dbFields.push(new Date(options.publishedBefore));
+	}
+
+	sql += 'GROUP BY e.id, ed.lang\n';
 	sql += 'ORDER BY e.published DESC, ed.lang\n';
 	sql += 'LIMIT ' + parseInt(options.limit) + '\n';
 
@@ -175,9 +171,12 @@ function getEntries(options, cb) {
 			}
 
 			tmpEntries[rows[i].id].langs[rows[i].lang] = {
-				'header': rows[i].header,
-				'body': rows[i].body,
-				'slug': rows[i].slug
+				'header':  rows[i].header,
+				'summary': rows[i].summary,
+				'body':    rows[i].body,
+				'slug':    rows[i].slug,
+				'tags':    rows[i].tags,
+				'images':  rows[i].images
 			};
 
 			i ++;
@@ -187,19 +186,50 @@ function getEntries(options, cb) {
 			entries.push(tmpEntries[entryId]);
 		}
 
+		// Make sure sorting is right
+		entries.sort(function(a, b) {
+			if (a.published > b.published)
+				return - 1;
+			if (a.published < b.published)
+				return 1;
+			return 0;
+		});
+
 		cb(null, entries);
 	});
 };
 
 function rmEntry(id, cb) {
-	db.query('DELETE FROM blog_entriesData WHERE entryId = ?', [id], function(err) {
-		if (err) {
-			cb(err);
-			return;
-		}
+	var tasks = [];
 
+	// Make sure the database tables exists before going further!
+	if ( ! dbChecked) {
+		log.debug('larvitblog: rmEntry() - Database not checked, rerunning this method when event have been emitted.');
+		eventEmitter.on('checked', function() {
+			log.debug('larvitblog: rmEntry() - Database check event received, rerunning rmEntry().');
+			exports.rmEntry(id, cb);
+		});
+
+		return;
+	}
+
+	tasks.push(function(cb) {
+		db.query('DELETE FROM blog_entriesDataTags WHERE entryId = ?', [id], cb);
+	});
+
+	tasks.push(function(cb) {
+		db.query('DELETE FROM blog_entriesDataImages WHERE entryId = ?', [id], cb);
+	});
+
+	tasks.push(function(cb) {
+		db.query('DELETE FROM blog_entriesData WHERE entryId = ?', [id], cb);
+	});
+
+	tasks.push(function(cb) {
 		db.query('DELETE FROM blog_entries WHERE id = ?', [id], cb);
 	});
+
+	async.series(tasks, cb);
 }
 
 /**
@@ -212,7 +242,9 @@ function rmEntry(id, cb) {
  *                       'en': {
  *                         'header': 'foo',
  *                         'slug': 'bar',
- *                         'body': 'lots of foo and bars'
+ *                         'summary': 'lots of foo and bars'
+ *                         'body': 'even more foos and bars'
+ *                         'tags': 'comma,separated,string'
  *                       },
  *                       'sv' ...
  *                     }
@@ -288,10 +320,19 @@ function saveEntry(data, cb) {
 	}
 
 	// We need to declare this outside the loop because of async operations
-	function addEntryData(lang, header, body, slug) {
+	function addEntryData(lang, header, summary, body, slug) {
 		tasks.push(function(cb) {
-			var sql      = 'INSERT INTO blog_entriesData (entryId, lang, header, body, slug) VALUES(?,?,?,?,?);',
-			    dbFields = [data.id, lang, header, body, slug];
+			var sql      = 'INSERT INTO blog_entriesData (entryId, lang, header, summary, body, slug) VALUES(?,?,?,?,?,?);',
+			    dbFields = [data.id, lang, header, summary, body, slug];
+
+			db.query(sql, dbFields, cb);
+		});
+	}
+
+	function addTagData(lang, content) {
+		tasks.push(function(cb) {
+			var sql      = 'INSERT INTO blog_entriesDataTags (entryId, lang, content) VALUES(?,?,?);',
+			    dbFields = [data.id, lang, content];
 
 			db.query(sql, dbFields, cb);
 		});
@@ -299,12 +340,23 @@ function saveEntry(data, cb) {
 
 	// Add content data
 	if (data.langs) {
+		tasks.push(function(cb) {
+			db.query('DELETE FROM blog_entriesDataTags WHERE entryId = ?', [data.id], cb);
+		});
+
 		for (lang in data.langs) {
 			if (data.langs[lang].slug)
 				data.langs[lang].slug = slugify(data.langs[lang].slug, {'save': '/'});
 
-			if (data.langs[lang].header || data.langs[lang].body)
-				addEntryData(lang, data.langs[lang].header, data.langs[lang].body, data.langs[lang].slug);
+			if (data.langs[lang].header || data.langs[lang].body || data.langs[lang].summary) {
+				addEntryData(lang, data.langs[lang].header, data.langs[lang].summary, data.langs[lang].body, data.langs[lang].slug);
+
+				if (data.langs[lang].tags) {
+					_.each(data.langs[lang].tags.split(','), function(tagContent) {
+						addTagData(lang, _.trim(tagContent));
+					});
+				}
+			}
 		}
 	}
 
