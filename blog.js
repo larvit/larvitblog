@@ -29,6 +29,7 @@ dbmigration(function(err) {
  *                        'slugs': ['blu', 'bla'],
  *                        'publishedAfter': dateObj,
  *                        'publishedBefore': dateObj,
+ *                        'tags': ['dks', 'ccc'],
  *                        'ids': [32,4],
  *                        'limit': 10,
  *                        'offset': 20
@@ -59,6 +60,9 @@ function getEntries(options, cb) {
 
 	if (options.slugs !== undefined && ! (options.slugs instanceof Array))
 		options.slugs = [options.slugs];
+
+	if (options.tags !== undefined && ! (options.tags instanceof Array))
+		options.tags = [options.tags];
 
 	// Make sure there is an invalid ID in the id list if it is empty
 	// Since the most logical thing to do is replying with an empty set
@@ -109,6 +113,21 @@ function getEntries(options, cb) {
 		while (options.slugs[i] !== undefined) {
 			sql += '?,';
 			dbFields.push(options.slugs[i]);
+
+			i ++;
+		}
+
+		sql = sql.substring(0, sql.length - 1) + '))\n';
+	}
+
+	// Only get post contents with selected tags
+	if (options.tags !== undefined) {
+		sql += '	AND e.id IN (SELECT entryId FROM blog_entriesDataTags WHERE content IN (';
+
+		i = 0;
+		while (options.tags[i] !== undefined) {
+			sql += '?,';
+			dbFields.push(options.tags[i]);
 
 			i ++;
 		}
@@ -198,6 +217,35 @@ function getEntries(options, cb) {
 		cb(null, entries);
 	});
 };
+
+function getTags(cb) {
+	var sql = 'SELECT COUNT(entryId) AS posts, lang, content FROM blog_entriesDataTags GROUP BY lang, content ORDER BY lang, COUNT(entryId) DESC;';
+
+	db.query(sql, function(err, rows) {
+		var tags = {'langs': {}},
+		    i;
+
+		if (err) {
+			cb(err);
+			return;
+		}
+
+		i = 0;
+		while (rows[i] !== undefined) {
+			if (tags.langs[rows[i].lang] === undefined)
+				tags.langs[rows[i].lang] = [];
+
+			tags.langs[rows[i].lang].push({
+				'posts': rows[i].posts,
+				'content': rows[i].content
+			});
+
+			i ++;
+		}
+
+		cb(null, tags);
+	});
+}
 
 function rmEntry(id, cb) {
 	var tasks = [];
@@ -379,5 +427,6 @@ function saveEntry(data, cb) {
 };
 
 exports.getEntries = getEntries;
+exports.getTags    = getTags;
 exports.rmEntry    = rmEntry;
 exports.saveEntry  = saveEntry;
