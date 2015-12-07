@@ -83,7 +83,7 @@ function getEntries(options, cb) {
 		return;
 	}
 
-	sql  = 'SELECT ed.*, e.id, e.created, e.published, GROUP_CONCAT(t.content) AS tags, GROUP_CONCAT(i.uri) AS images\n';
+	sql  = 'SELECT ed.*, e.id, e.created, e.published, GROUP_CONCAT(DISTINCT t.content) AS tags, GROUP_CONCAT(DISTINCT i.uri) AS images\n';
 	sql += 'FROM blog_entries e\n';
 	sql += '	LEFT JOIN blog_entriesData       ed ON ed.entryId = e.id\n';
 	sql += '	LEFT JOIN blog_entriesDataTags   t  ON t.entryId  = e.id AND t.lang = ed.lang\n';
