@@ -9,6 +9,7 @@
 		"async": "~1.5",
 		"larvitdb": "~0.3",
 		"larvitdbmigration": "~0.2",
+		"larvitimages": "~0.1",
 		"larvitslugify": "~0.10",
 		"lodash": "~3.10",
 		"winston": "~2.1"
@@ -31,7 +32,7 @@
 		"url": "https://github.com/larvit/larvitblog",
 		"type": "git"
 	},
-	"version": "0.1.1",
+	"version": "0.2.0-rc1",
 	"readmeFilename": "README.md",
 	"bugs": {
 		"url": "https://github.com/larvit/larvitblog/issues"

@@ -2,6 +2,7 @@
 
 var slugify = require('larvitslugify'),
     moment  = require('moment'),
+    imgLib  = require('larvitimages'),
     async   = require('async'),
     blog    = require('larvitblog'),
     _       = require('lodash');
@@ -18,8 +19,37 @@ exports.run = function(req, res, callback) {
 		return;
 	}
 
+	function getDbImages(cb) {
+		var slugs = [],
+		    i;
+
+		i = 0;
+		while (i !== 5) {
+			i ++;
+			slugs.push('blog_entry' + entryId + '_image' + i);
+		}
+
+		imgLib.getImages({'slugs': slugs, 'limit': false}, function(err, dbImages) {
+			if (err) {
+				cb(err);
+				return;
+			}
+
+			data.dbImages = dbImages;
+
+			cb();
+		});
+	}
+
+	// Get possible images
+	if (entryId) {
+		tasks.push(getDbImages);
+	}
+
 	// Save a POSTed form
 	if (res.globalData.formFields.save !== undefined) {
+
+		// Save input data (not images)
 		tasks.push(function(cb) {
 			var saveObj = {'langs': {}},
 			    fieldName,
@@ -80,6 +110,86 @@ exports.run = function(req, res, callback) {
 				}
 				cb();
 			});
+		});
+
+		// Save images
+		tasks.push(function(cb) {
+			var newImages = {},
+			    tasks     = [],
+			    fieldName,
+			    fileExt,
+			    slug,
+			    i;
+
+			if (req.formFiles !== undefined) {
+				i = 0;
+				while (i !== 5) {
+					i ++;
+
+					if (req.formFiles['image' + i].size !== 0) {
+						     if (req.formFiles['image' + i].type === 'image/png')  fileExt = 'png';
+						else if (req.formFiles['image' + i].type === 'image/jpeg') fileExt = 'jpg';
+						else if (req.formFiles['image' + i].type === 'image/gif')  fileExt = 'gif';
+						else                                                       fileExt = false;
+
+						if (fileExt) {
+							slug = 'blog_entry' + entryId + '_image' + i + '.' + fileExt;
+
+							newImages[slug] = {
+								'slug':         slug,
+								'uploadedFile': req.formFiles['image' + i]
+							};
+
+							_.each(data.dbImages, function(img) {
+								if (img.slug.substring(0, img.slug.length - 4) === slug.substring(0, slug.length - 4)) {
+									newImages[slug].id = img.id;
+								}
+							});
+						}
+					}
+				}
+
+				function saveImg(slug) {
+					tasks.push(function(cb) {
+						imgLib.saveImage(newImages[slug], cb);
+					});
+				}
+
+				// Save the new ones
+				for (slug in newImages) {
+					saveImg(slug);
+				}
+
+				function addRmTask(imgNr) {
+					tasks.push(function(cb) {
+						imgLib.getImages({'slugs': 'blog_entry' + entryId + '_image' + imgNr}, function(err, images) {
+							if (err) {
+								cb(err);
+								return;
+							}
+
+							if (images.length) {
+								imgLib.rmImage(images[0].id, cb);
+								return;
+							}
+
+							cb();
+						});
+					});
+				}
+
+				// Delete the delete-marked ones
+				for (fieldName in req.formFields) {
+					if (fieldName.substring(0, 9) === 'rm_image_') {
+						addRmTask(fieldName.split('_')[2]);
+					}
+				}
+
+				// Re-read images from database
+				tasks.push(getDbImages);
+
+				async.series(tasks, cb);
+			}
 		});
 	}
 
