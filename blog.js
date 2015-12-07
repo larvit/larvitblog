@@ -163,7 +163,7 @@ function getEntries(options, cb) {
 	}
 
 	sql += 'GROUP BY e.id, ed.lang\n';
-	sql += 'ORDER BY e.published DESC, ed.lang\n';
+	sql += 'ORDER BY e.published DESC, ed.lang, i.imgNr\n';
 	sql += 'LIMIT ' + parseInt(options.limit) + '\n';
 
 	if (options.offset !== undefined)
