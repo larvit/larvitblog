@@ -182,10 +182,11 @@ function getEntries(options, cb) {
 		while (rows[i] !== undefined) {
 			if (tmpEntries[rows[i].id] === undefined) {
 				tmpEntries[rows[i].id] = {
-					'id': rows[i].id,
-					'created': rows[i].created,
+					'id':        rows[i].id,
+					'created':   rows[i].created,
 					'published': rows[i].published,
-					'langs': {}
+					'images':    rows[i].images,
+					'langs':     {}
 				};
 			}
 
@@ -194,8 +195,7 @@ function getEntries(options, cb) {
 				'summary': rows[i].summary,
 				'body':    rows[i].body,
 				'slug':    rows[i].slug,
-				'tags':    rows[i].tags,
-				'images':  rows[i].images
+				'tags':    rows[i].tags
 			};
 
 			i ++;
