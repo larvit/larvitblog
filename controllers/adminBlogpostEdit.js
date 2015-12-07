@@ -5,6 +5,7 @@ var slugify = require('larvitslugify'),
     imgLib  = require('larvitimages'),
     async   = require('async'),
     blog    = require('larvitblog'),
+    db      = require('larvitdb'),
     _       = require('lodash');
 
 exports.run = function(req, res, callback) {
@@ -151,7 +152,23 @@ exports.run = function(req, res, callback) {
 
 				function saveImg(slug) {
 					tasks.push(function(cb) {
-						imgLib.saveImage(newImages[slug], cb);
+						var imgNr = parseInt(slug.split('_')[2].substring(5));
+
+						imgLib.saveImage(newImages[slug], function(err) {
+							if (err) {
+								cb(err);
+								return;
+							}
+
+							db.query('DELETE FROM blog_entriesDataImages WHERE entryId = ? AND imgNr = ?', [entryId, imgNr], function(err) {
+								if (err) {
+									cb(err);
+									return;
+								}
+
+								db.query('INSERT INTO blog_entriesDataImages (entryId, imgNr, uri) VALUES(?, ?, ?);', [entryId, imgNr, slug], cb);
+							});
+						});
 					});
 				}
 
@@ -175,6 +192,10 @@ exports.run = function(req, res, callback) {
 
 							cb();
 						});
+					});
+
+					tasks.push(function(cb) {
+						db.query('DELETE FROM blog_entriesDataImages WHERE entryId = ? AND imgNr = ?', [entryId, imgNr], cb);
 					});
 				}
 
