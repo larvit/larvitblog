@@ -221,6 +221,17 @@ function getEntries(options, cb) {
 function getTags(cb) {
 	var sql = 'SELECT COUNT(entryId) AS posts, lang, content FROM blog_entriesDataTags GROUP BY lang, content ORDER BY lang, COUNT(entryId) DESC;';
 
+	// Make sure the database tables exists before going further!
+	if ( ! dbChecked) {
+		log.debug('larvitblog: getTags() - Database not checked, rerunning this method when event have been emitted.');
+		eventEmitter.on('checked', function() {
+			log.debug('larvitblog: getTags() - Database check event received, rerunning getTags().');
+			getTags(cb);
+		});
+
+		return;
+	}
+
 	db.query(sql, function(err, rows) {
 		var tags = {'langs': {}},
 		    i;
