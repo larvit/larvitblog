@@ -81,7 +81,7 @@ exports.run = function(req, res, callback) {
 						saveObj.langs[lang] = {};
 
 					if (fieldName === 'slug') {
-						res.globalData.formFields[field] = _.trimRight(res.globalData.formFields[field], '/');
+						res.globalData.formFields[field] = _.trimEnd(res.globalData.formFields[field], '/');
 
 						// Auto generate slug if it is not set
 						if (res.globalData.formFields[field] === '' && saveObj.published !== null && res.globalData.formFields['header.' + lang] !== '') {
