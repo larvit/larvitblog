@@ -10,22 +10,15 @@
 		</tr>
 	</thead>
 	<tbody>
-	<%
-	_.each(blogEntries, function(entry) {
-		var lang;
-
-		if (entry.langs.en !== undefined) {
-			lang = 'en';
-		} else {
-			_.each(entry.langs, function(data, thisLang) {
-				lang = thisLang;
-				return;
-			});
-		}
-	%>
 		<tr>
-			<td><a href="adminBlogpostEdit?langs=en&id=<%= entry.id %>"><%= entry.id %></a></td>
-			<td><%= entry.langs[lang].header %></td>
+			<td><a href="adminBlogpostEdit?langs=<% if(global.langs){print(global.langs.join(','));}else{print('en');} %>&id=<%= entry.id %>"><%= entry.id %></a></td>
+			<td><%
+				var lang;
+				for (lang in entry.langs) {
+					print(entry.langs[lang].header);
+					break;
+				}
+			%></td>
 			<td><%= _.moment(entry.created).format('YYYY-MM-DD') %></td>
 			<td><% if (entry.published) print(_.moment(entry.published).format('YYYY-MM-DD HH:mm:ss')); else print('No'); %></td>
 		</tr>

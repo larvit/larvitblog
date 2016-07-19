@@ -12,6 +12,9 @@ exports.run = function(req, res, callback) {
 		return;
 	}
 
+	if (res.langs)
+		data.global.langs = res.langs;
+
 	blog.getEntries(function(err, rows) {
 		data.blogEntries = rows;
 		callback(null, req, res, data);
