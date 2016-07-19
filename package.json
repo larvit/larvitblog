@@ -1,6 +1,6 @@
 {
   "name": "larvitblog",
-  "version": "0.2.8",
+  "version": "0.3.0",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -9,9 +9,9 @@
   "private": false,
   "dependencies": {
     "async": "^1.5.2",
-    "larvitdb": "^1.1.0",
+    "larvitdb": "^1.1.2",
     "larvitdbmigration": "^1.0.2",
-    "larvitimages": "^0.3.0",
+    "larvitimages": "^0.3.1",
     "larvitslugify": "^0.10.10",
     "lodash": "^4.13.1",
     "winston": "^2.2.0"
