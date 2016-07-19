@@ -127,7 +127,7 @@ exports.run = function(req, res, callback) {
 				while (i !== 5) {
 					i ++;
 
-					if (req.formFiles['image' + i].size !== 0) {
+					if (req.formFiles['image' + i] !== undefined && req.formFiles['image' + i].size !== 0) {
 						     if (req.formFiles['image' + i].type === 'image/png')  fileExt = 'png';
 						else if (req.formFiles['image' + i].type === 'image/jpeg') fileExt = 'jpg';
 						else if (req.formFiles['image' + i].type === 'image/gif')  fileExt = 'gif';
