@@ -6,20 +6,31 @@ var _            = require('lodash'),
     async        = require('async'),
     events       = require('events'),
     slugify      = require('larvitslugify'),
-    dbmigration  = require('larvitdbmigration')({'tableName': 'blog_db_version', 'migrationScriptsPath': __dirname + '/dbmigration'}),
+    DbMigration  = require('larvitdbmigration'),
     eventEmitter = new events.EventEmitter(),
     dbChecked    = false;
 
-// Handle database migrations
-dbmigration(function(err) {
-	if (err) {
-		log.error('larvitblog: createTablesIfNotExists() - Database error: ' + err.message);
-		return;
-	}
+(function () {
+	const	options	= {};
 
-	dbChecked = true;
-	eventEmitter.emit('checked');
-});
+	let dbMigration;
+
+	options.dbType	= 'larvitdb';
+	options.dbDriver	= db;
+	options.tableName	= 'blog_db_version';
+	options.migrationScriptsPath	= __dirname + '/dbmigration';
+	dbMigration	= new DbMigration(options);
+
+	dbMigration.run(function (err) {
+		if (err) {
+			log.error('larvitblog: createTablesIfNotExists() - Database error: ' + err.message);
+			return;
+		}
+
+		dbChecked = true;
+		eventEmitter.emit('checked');
+	});
+})();
 
 /**
  * Get blog entries
