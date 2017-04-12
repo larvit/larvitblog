@@ -1,6 +1,6 @@
 {
   "name": "larvitblog",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -11,9 +11,9 @@
     "async": "^2.1.4",
     "larvitdb": "^1.2.5",
     "larvitdbmigration": "^2.0.0",
-    "larvitimages": "^0.5.1",
+    "larvitimages": "^0.6.0",
+    "larvitslugify": "^0.11.1",
     "lodash": "^4.17.4",
-    "slugify": "^1.1.0",
     "winston": "^2.3.1"
   },
   "description": "Simple blog module with admin GUI for larvitadmingui",
