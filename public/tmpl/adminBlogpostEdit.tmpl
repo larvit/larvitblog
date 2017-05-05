@@ -25,7 +25,7 @@
 		<div class="row">
 			<div class="three columns">
 				<label for="id">Id</label>
-				<input type="text" value="<%= global.urlParsed.query.id %>" disabled="disabled" />
+				<input type="text" value="<%= global.urlParsed.query.uuid %>" disabled="disabled" />
 			</div>
 
 			<div class="three columns">
@@ -38,7 +38,7 @@
 				<input type="text" name="published" value="<%
 					if (global.formFields.published)
 						print(_.moment(global.formFields.published).format('YYYY-MM-DD HH:mm:ss'));
-					else if ( ! global.urlParsed.query.id)
+					else if ( ! global.urlParsed.query.uuid)
 						print(_.moment().format('YYYY-MM-DD HH:mm:ss'));
 				%>" placeholder="YYYY-MM-DD hh:mm:ss" />
 			</div>
@@ -90,7 +90,7 @@
 			<% } %>
 		</div>
 
-		<% if (global.urlParsed.query.id) { %>
+		<% if (global.urlParsed.query.uuid) { %>
 		<div class="row">
 			<% var i = 0; %>
 			<% while (i < 5) { %>
@@ -98,7 +98,7 @@
 
 				<div class="two columns">
 					<% _.each(dbImages, function(image) { %>
-						<% if (image.slug.substring(0, 16 + global.urlParsed.query.id.toString().length + i.toString().length) === 'blog_entry' + global.urlParsed.query.id + '_image' + i) { %>
+						<% if (image.slug.substring(0, 16 + global.urlParsed.query.uuid.toString().length + i.toString().length) === 'blog_entry' + global.urlParsed.query.uuid + '_image' + i) { %>
 							<img src="/uploaded/images/<%= image.slug %>?width=200" alt="" style="width: 100%" />
 						<% } %>
 					<% }); %>
@@ -114,8 +114,8 @@
 
 				<div class="two columns">
 					<% _.each(dbImages, function(image) { %>
-						<% var shortSlug = 'blog_entry' + global.urlParsed.query.id + '_image' + i; %>
-						<% if (image.slug.substring(0, 16 + global.urlParsed.query.id.toString().length + i.toString().length) === shortSlug) { %>
+						<% var shortSlug = 'blog_entry' + global.urlParsed.query.uuid + '_image' + i; %>
+						<% if (image.slug.substring(0, 16 + global.urlParsed.query.uuid.toString().length + i.toString().length) === shortSlug) { %>
 							<label for="<%= shortSlug %>">
 								<input type="checkbox" name="rm_image_<%= i %>" />
 								<span class="label-body">Delete</span>
