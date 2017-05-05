@@ -1,116 +1,85 @@
 'use strict';
 
-var _            = require('lodash'),
-    db           = require('larvitdb'),
-    log          = require('winston'),
-    async        = require('async'),
-    events       = require('events'),
-    slugify      = require('larvitslugify'),
-    DbMigration  = require('larvitdbmigration'),
-    eventEmitter = new events.EventEmitter(),
-    dbChecked    = false;
-
-(function () {
-	const	options	= {};
-
-	let dbMigration;
-
-	options.dbType	= 'larvitdb';
-	options.dbDriver	= db;
-	options.tableName	= 'blog_db_version';
-	options.migrationScriptsPath	= __dirname + '/dbmigration';
-	dbMigration	= new DbMigration(options);
-
-	dbMigration.run(function (err) {
-		if (err) {
-			log.error('larvitblog: createTablesIfNotExists() - Database error: ' + err.message);
-			return;
-		}
-
-		dbChecked = true;
-		eventEmitter.emit('checked');
-	});
-})();
+const	topLogPrefix	= 'larvitblog: blog.js: ',
+	events	= require('events'),
+	eventEmitter	= new events.EventEmitter(),
+	dataWriter	= require(__dirname + '/dataWriter.js'),
+	slugify	= require('larvitslugify'),
+	async	= require('async'),
+	log	= require('winston'),
+	db	= require('larvitdb'),
+	_	= require('lodash');
 
 /**
  * Get blog entries
  *
- * @param obj options - { // All options are optional!
- *                        'langs': ['sv', 'en'],
- *                        'slugs': ['blu', 'bla'],
- *                        'publishedAfter': dateObj,
- *                        'publishedBefore': dateObj,
- *                        'tags': ['dks', 'ccc'],
- *                        'ids': [32,4],
- *                        'limit': 10,
- *                        'offset': 20
- *                      }
+ * @param obj options -	{	// All options are optional!
+ *		'langs': ['sv', 'en'],
+ *		'slugs': ['blu', 'bla'],
+ *		'publishedAfter': dateObj,
+ *		'publishedBefore': dateObj,
+ *		'tags': ['dks', 'ccc'],
+ *		'ids': [32,4],
+ *		'limit': 10,
+ *		'offset': 20
+ *	}
  * @param func cb - callback(err, entries)
  */
 function getEntries(options, cb) {
-	var tmpEntries = {},
-	    dbFields   = [],
-	    entries    = [],
-	    sql,
-	    i;
+	const	logPrefix	= topLogPrefix + 'getEntries() - ',
+		dbFields	= [];
+
+	let	sql	= '';
 
 	if (typeof options === 'function') {
 		cb      = options;
 		options = {};
 	}
 
-	log.debug('larvitblog: getEntries() - Called with options: "' + JSON.stringify(options) + '"');
+	log.debug(logPrefix + 'Called with options: "' + JSON.stringify(options) + '"');
 
 	// Make sure options that should be arrays actually are arrays
 	// This will simplify our lives in the SQL builder below
-	if (options.langs !== undefined && ! (options.langs instanceof Array))
+	if (options.langs !== undefined && ! (options.langs instanceof Array)) {
 		options.langs = [options.langs];
+	}
 
-	if (options.ids !== undefined && ! (options.ids instanceof Array))
-		options.ids = [options.ids];
+	if (options.uuids !== undefined && ! (options.uuids instanceof Array)) {
+		options.uuids = [options.uuids];
+	}
 
-	if (options.slugs !== undefined && ! (options.slugs instanceof Array))
+	if (options.slugs !== undefined && ! (options.slugs instanceof Array)) {
 		options.slugs = [options.slugs];
+	}
 
-	if (options.tags !== undefined && ! (options.tags instanceof Array))
+	if (options.tags !== undefined && ! (options.tags instanceof Array)) {
 		options.tags = [options.tags];
+	}
 
 	// Make sure there is an invalid ID in the id list if it is empty
 	// Since the most logical thing to do is replying with an empty set
-	if (options.ids instanceof Array && options.ids.length === 0)
-		options.ids.push(- 1);
-
-	if (options.limit === undefined)
-		options.limit = 10;
-
-	// Make sure the database tables exists before going further!
-	if ( ! dbChecked) {
-		log.debug('larvitblog: getEntries() - Database not checked, rerunning this method when event have been emitted.');
-		eventEmitter.on('checked', function() {
-			log.debug('larvitblog: getEntries() - Database check event received, rerunning getEntries().');
-			getEntries(options, cb);
-		});
-
-		return;
+	if (options.uuids instanceof Array && options.uuids.length === 0) {
+		options.uuids.push(- 1);
 	}
 
-	sql  = 'SELECT ed.*, e.id, e.created, e.published, GROUP_CONCAT(DISTINCT t.content) AS tags, GROUP_CONCAT(DISTINCT i.uri) AS images\n';
+	if (options.limit === undefined) {
+		options.limit = 10;
+	}
+
+	sql += 'SELECT ed.*, e.uuid, e.created, e.published, GROUP_CONCAT(DISTINCT t.content) AS tags, GROUP_CONCAT(DISTINCT i.uri) AS images\n';
 	sql += 'FROM blog_entries e\n';
-	sql += '	LEFT JOIN blog_entriesData       ed ON ed.entryId = e.id\n';
-	sql += '	LEFT JOIN blog_entriesDataTags   t  ON t.entryId  = e.id AND t.lang = ed.lang\n';
-	sql += '	LEFT JOIN blog_entriesDataImages i  ON i.entryId  = e.id\n';
+	sql += '	LEFT JOIN blog_entriesData	ed	ON ed.entryUuid	= e.uuid\n';
+	sql += '	LEFT JOIN blog_entriesDataTags	t	ON t.entryUuid	= e.uuid AND t.lang = ed.lang\n';
+	sql += '	LEFT JOIN blog_entriesDataImages	i	ON i.entryUuid	= e.uuid\n';
 	sql += 'WHERE 1 + 1\n';
 
 	// Only get post contents with selected languages
 	if (options.langs !== undefined) {
 		sql += '	AND ed.lang IN (';
 
-		i = 0;
-		while (options.langs[i] !== undefined) {
+		for (let i = 0; options.langs[i] !== undefined; i ++) {
 			sql += '?,';
 			dbFields.push(options.langs[i]);
-
-			i ++;
 		}
 
 		sql = sql.substring(0, sql.length - 1) + ')\n';
@@ -118,14 +87,11 @@ function getEntries(options, cb) {
 
 	// Only get posts with the current slugs
 	if (options.slugs !== undefined) {
-		sql += '	AND e.id IN (SELECT entryId FROM blog_entriesData WHERE slug IN (';
+		sql += '	AND e.uuid IN (SELECT entryUuid FROM blog_entriesData WHERE slug IN (';
 
-		i = 0;
-		while (options.slugs[i] !== undefined) {
+		for (let i = 0; options.slugs[i] !== undefined; i ++) {
 			sql += '?,';
 			dbFields.push(options.slugs[i]);
-
-			i ++;
 		}
 
 		sql = sql.substring(0, sql.length - 1) + '))\n';
@@ -133,29 +99,23 @@ function getEntries(options, cb) {
 
 	// Only get post contents with selected tags
 	if (options.tags !== undefined) {
-		sql += '	AND e.id IN (SELECT entryId FROM blog_entriesDataTags WHERE content IN (';
+		sql += '	AND e.uuid IN (SELECT entryUuid FROM blog_entriesDataTags WHERE content IN (';
 
-		i = 0;
-		while (options.tags[i] !== undefined) {
+		for (let i = 0; options.tags[i] !== undefined; i ++) {
 			sql += '?,';
 			dbFields.push(options.tags[i]);
-
-			i ++;
 		}
 
 		sql = sql.substring(0, sql.length - 1) + '))\n';
 	}
 
 	// Only get posts with given ids
-	if (options.ids !== undefined) {
-		sql += '	AND e.id IN (';
+	if (options.uuids !== undefined) {
+		sql += '	AND e.uuid IN (';
 
-		i = 0;
-		while (options.ids[i] !== undefined) {
+		for (let i = 0; options.uuids[i] !== undefined; i ++) {
 			sql += '?,';
-			dbFields.push(options.ids[i]);
-
-			i ++;
+			dbFields.push(options.uuids[i]);
 		}
 
 		sql = sql.substring(0, sql.length - 1) + ')\n';
@@ -173,56 +133,57 @@ function getEntries(options, cb) {
 		dbFields.push(new Date(options.publishedBefore));
 	}
 
-	sql += 'GROUP BY e.id, ed.lang\n';
+	sql += 'GROUP BY e.uuid, ed.lang\n';
 	sql += 'ORDER BY e.published DESC, ed.lang, i.imgNr\n';
 	sql += 'LIMIT ' + parseInt(options.limit) + '\n';
 
-	if (options.offset !== undefined)
+	if (options.offset !== undefined) {
 		sql += ' OFFSET ' + parseInt(options.offset);
+	}
 
-	db.query(sql, dbFields, function(err, rows) {
-		var entryId,
-		    i;
+	db.query(sql, dbFields, function (err, rows) {
+		const	tmpEntries	= {},
+			entries	= [];
 
-		if (err) {
-			cb(err);
-			return;
-		}
+		if (err) return cb(err);
 
-		i = 0;
-		while (rows[i] !== undefined) {
-			if (tmpEntries[rows[i].id] === undefined) {
-				tmpEntries[rows[i].id] = {
-					'id':        rows[i].id,
-					'created':   rows[i].created,
-					'published': rows[i].published,
-					'images':    rows[i].images,
-					'langs':     {}
+		for (let i = 0; rows[i] !== undefined; i ++) {
+			const	row	= rows[i];
+
+			row.uuid	= lUtils.formatUuid(row.uuid);
+
+			if (tmpEntries[row.uuid] === undefined) {
+				tmpEntries[row.uuid] = {
+					'uuid':	row.uuid,
+					'created':	row.created,
+					'published':	row.published,
+					'images':	row.images,
+					'langs':	{}
 				};
 			}
 
-			tmpEntries[rows[i].id].langs[rows[i].lang] = {
-				'header':  rows[i].header,
-				'summary': rows[i].summary,
-				'body':    rows[i].body,
-				'slug':    rows[i].slug,
-				'tags':    rows[i].tags
+			tmpEntries[row.uuid].langs[row.lang] = {
+				'header':	row.header,
+				'summary':	row.summary,
+				'body':	row.body,
+				'slug':	row.slug,
+				'tags':	row.tags
 			};
-
-			i ++;
 		}
 
-		for (entryId in tmpEntries) {
-			entries.push(tmpEntries[entryId]);
+		for (const entryUuid of Object.keys(tmpEntries)) {
+			entries.push(tmpEntries[entryUuid]);
 		}
 
 		// Make sure sorting is right
-		entries.sort(function(a, b) {
-			if (a.published > b.published)
+		entries.sort(function (a, b) {
+			if (a.published > b.published) {
 				return - 1;
-			if (a.published < b.published)
+			} else if (a.published < b.published) {
 				return 1;
-			return 0;
+			} else {
+				return 0;
+			}
 		});
 
 		cb(null, entries);
@@ -230,27 +191,13 @@ function getEntries(options, cb) {
 };
 
 function getTags(cb) {
-	var sql = 'SELECT COUNT(entryId) AS posts, lang, content FROM blog_entriesDataTags GROUP BY lang, content ORDER BY lang, COUNT(entryId) DESC;';
+	let sql = 'SELECT COUNT(entryUuid) AS posts, lang, content FROM blog_entriesDataTags GROUP BY lang, content ORDER BY lang, COUNT(entryUuid) DESC;';
 
-	// Make sure the database tables exists before going further!
-	if ( ! dbChecked) {
-		log.debug('larvitblog: getTags() - Database not checked, rerunning this method when event have been emitted.');
-		eventEmitter.on('checked', function() {
-			log.debug('larvitblog: getTags() - Database check event received, rerunning getTags().');
-			getTags(cb);
-		});
-
-		return;
-	}
-
-	db.query(sql, function(err, rows) {
-		var tags = {'langs': {}},
+	db.query(sql, function (err, rows) {
+		let tags = {'langs': {}},
 		    i;
 
-		if (err) {
-			cb(err);
-			return;
-		}
+		if (err) return cb(err);
 
 		i = 0;
 		while (rows[i] !== undefined) {
@@ -269,37 +216,20 @@ function getTags(cb) {
 	});
 }
 
-function rmEntry(id, cb) {
-	var tasks = [];
+function rmEntry(uuid, cb) {
+	const	options	= {'exchange': dataWriter.exchangeName},
+		message	= {};
 
-	// Make sure the database tables exists before going further!
-	if ( ! dbChecked) {
-		log.debug('larvitblog: rmEntry() - Database not checked, rerunning this method when event have been emitted.');
-		eventEmitter.on('checked', function() {
-			log.debug('larvitblog: rmEntry() - Database check event received, rerunning rmEntry().');
-			exports.rmEntry(id, cb);
-		});
+	message.action	= 'rmEntry';
+	message.params	= {};
 
-		return;
-	}
+	message.params.uuid	= uuid;
 
-	tasks.push(function(cb) {
-		db.query('DELETE FROM blog_entriesDataTags WHERE entryId = ?', [id], cb);
+	intercom.send(message, options, function (err, msgUuid) {
+		if (err) return cb(err);
+
+		dataWriter.emitter.once(msgUuid, cb);
 	});
-
-	tasks.push(function(cb) {
-		db.query('DELETE FROM blog_entriesDataImages WHERE entryId = ?', [id], cb);
-	});
-
-	tasks.push(function(cb) {
-		db.query('DELETE FROM blog_entriesData WHERE entryId = ?', [id], cb);
-	});
-
-	tasks.push(function(cb) {
-		db.query('DELETE FROM blog_entries WHERE id = ?', [id], cb);
-	});
-
-	async.series(tasks, cb);
 }
 
 /**
@@ -335,7 +265,7 @@ function saveEntry(data, cb) {
 	// Make sure the database tables exists before going further!
 	if ( ! dbChecked) {
 		log.debug('larvitblog: saveEntry() - Database not checked, rerunning this method when event have been emitted.');
-		eventEmitter.on('checked', function() {
+		eventEmitter.on('checked', function () {
 			log.debug('larvitblog: saveEntry() - Database check event received, rerunning saveEntry().');
 			exports.saveEntry(data, cb);
 		});
@@ -345,7 +275,7 @@ function saveEntry(data, cb) {
 
 	// Create a new post id is not set
 	if (data.id === undefined) {
-		tasks.push(function(cb) {
+		tasks.push(function (cb) {
 			var sql      = 'INSERT INTO blog_entries (created',
 				  dbFields = [];
 
@@ -361,7 +291,7 @@ function saveEntry(data, cb) {
 
 			sql += ');';
 
-			db.query(sql, dbFields, function(err, result) {
+			db.query(sql, dbFields, function (err, result) {
 				if (err) {
 					cb(err);
 					return;
@@ -374,13 +304,13 @@ function saveEntry(data, cb) {
 		});
 	} else {
 		// Erase previous data
-		tasks.push(function(cb) {
+		tasks.push(function (cb) {
 			db.query('DELETE FROM blog_entriesData WHERE entryId = ?', [parseInt(data.id)], cb);
 		});
 
 		// Set published
 		if (data.published !== undefined) {
-			tasks.push(function(cb) {
+			tasks.push(function (cb) {
 				var sql      = 'UPDATE blog_entries SET published = ? WHERE id = ?',
 				    dbFields = [data.published, data.id];
 
@@ -391,7 +321,7 @@ function saveEntry(data, cb) {
 
 	// We need to declare this outside the loop because of async operations
 	function addEntryData(lang, header, summary, body, slug) {
-		tasks.push(function(cb) {
+		tasks.push(function (cb) {
 			var sql      = 'INSERT INTO blog_entriesData (entryId, lang, header, summary, body, slug) VALUES(?,?,?,?,?,?);',
 			    dbFields = [data.id, lang, header, summary, body, slug];
 
@@ -400,7 +330,7 @@ function saveEntry(data, cb) {
 	}
 
 	function addTagData(lang, content) {
-		tasks.push(function(cb) {
+		tasks.push(function (cb) {
 			var sql      = 'INSERT INTO blog_entriesDataTags (entryId, lang, content) VALUES(?,?,?);',
 			    dbFields = [data.id, lang, content];
 
@@ -410,7 +340,7 @@ function saveEntry(data, cb) {
 
 	// Add content data
 	if (data.langs) {
-		tasks.push(function(cb) {
+		tasks.push(function (cb) {
 			db.query('DELETE FROM blog_entriesDataTags WHERE entryId = ?', [data.id], cb);
 		});
 
@@ -422,7 +352,7 @@ function saveEntry(data, cb) {
 				addEntryData(lang, data.langs[lang].header, data.langs[lang].summary, data.langs[lang].body, data.langs[lang].slug);
 
 				if (data.langs[lang].tags) {
-					_.each(data.langs[lang].tags.split(','), function(tagContent) {
+					_.each(data.langs[lang].tags.split(','), function (tagContent) {
 						addTagData(lang, _.trim(tagContent));
 					});
 				}
@@ -430,14 +360,14 @@ function saveEntry(data, cb) {
 		}
 	}
 
-	async.series(tasks, function(err) {
+	async.series(tasks, function (err) {
 		if (err) {
 			cb(err);
 			return;
 		}
 
 		// Re-read this entry from the database to be sure to get the right deal!
-		getEntries({'ids': data.id}, function(err, entries) {
+		getEntries({'ids': data.id}, function (err, entries) {
 			if (err) {
 				cb(err);
 				return;
