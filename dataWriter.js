@@ -4,12 +4,14 @@ const	EventEmitter	= require('events').EventEmitter,
 	eventEmitter	= new EventEmitter(),
 	topLogPrefix	= 'larvitblog: dataWriter.js: ',
 	DbMigration	= require('larvitdbmigration'),
-	uuidLib	= require('uuid'),
 	lUtils	= require('larvitutils'),
 	amsync	= require('larvitamsync'),
 	async	= require('async'),
 	log	= require('winston'),
-	db	= require('larvitdb');
+	db	= require('larvitdb'),
+	slugify	= require('slugify'),
+	_	= require('lodash');
+
 
 let	readyInProgress	= false,
 	isReady	= false,
@@ -232,8 +234,111 @@ function rmEntry(params, deliveryTag, msgUuid) {
 	});
 
 	tasks.push(function (cb) {
-		db.query('DELETE FROM blog_entries WHERE id = ?', [uuid], cb);
+		db.query('DELETE FROM blog_entries WHERE uuid = ?', [uuid], cb);
 	});
+
+	async.series(tasks, function (err) {
+		exports.emitter.emit(msgUuid, err);
+	});
+}
+
+function saveEntry(params, deliveryTag, msgUuid) {
+
+	const logPrefix = topLogPrefix + 'saveEntry() -',
+		tasks	= [],
+		 data	= params.data;
+
+	log.verbose(logPrefix + 'Running with data. "' + JSON.stringify(data) + '"');
+
+	// Create a new post id is not set
+	if (data.uuid === undefined) {
+		log.warn(logPrefix + 'Uuid not set on blog post');
+		return exports.emitter.emit(msgUuid, new Error('Uuid not set'));
+	}
+
+	tasks.push(function (cb) {
+		const dbFields	= [];
+
+		let sql      = 'INSERT IGNORE INTO blog_entries (uuid, created';
+
+		dbFields.push(lUtils.uuidToBuffer(data.uuid));
+
+		if (data.published) {
+			sql += ', published';
+		}
+
+		sql += ') VALUES (?, NOW()';
+
+		if (data.published) {
+			sql += ', ?';
+			dbFields.push(data.published);
+		}
+
+		sql += ');';
+
+		db.query(sql, dbFields, function (err, result) {
+			if (err) return cb(err);
+
+			// todo: kolla här hur många rader som ändrats
+			if (result) {
+				log.debug(logPrefix + 'New blog entry created with uuid: "' + data.uuid + '"');
+			}
+
+			cb();
+		});
+	});
+
+	// Set published
+	if (data.published !== undefined) {
+		tasks.push(function (cb) {
+			const sql      = 'UPDATE blog_entries SET published = ? WHERE uuid = ?',
+				dbFields = [data.published, lUtils.uuidToBuffer(data.uuid)];
+
+			db.query(sql, dbFields, cb);
+		});
+	}
+
+
+	// We need to declare this outside the loop because of async operations
+	function addEntryData(lang, header, summary, body, slug) {
+		tasks.push(function (cb) {
+			const sql      = 'INSERT INTO blog_entriesData (entryUuid, lang, header, summary, body, slug) VALUES(?,?,?,?,?,?);',
+			    dbFields = [lUtils.uuidToBuffer(data.uuid), lang, header, summary, body, slug];
+
+			db.query(sql, dbFields, cb);
+		});
+	}
+
+	function addTagData(lang, content) {
+		tasks.push(function (cb) {
+			const sql      = 'INSERT INTO blog_entriesDataTags (entryUuid, lang, content) VALUES(?,?,?);',
+			    dbFields = [lUtils.uuidToBuffer(data.uuid), lang, content];
+
+			db.query(sql, dbFields, cb);
+		});
+	}
+
+	// Add content data
+	if (data.langs !== undefined) {
+		tasks.push(function (cb) {
+			db.query('DELETE FROM blog_entriesDataTags WHERE entryUuid = ?', [lUtils.uuidToBuffer(data.uuid)], cb);
+		});
+
+		for (const lang in data.langs) {
+			if (data.langs[lang].slug)
+				data.langs[lang].slug = slugify(data.langs[lang].slug, {'save': '/'});
+
+			if (data.langs[lang].header || data.langs[lang].body || data.langs[lang].summary) {
+				addEntryData(lang, data.langs[lang].header, data.langs[lang].summary, data.langs[lang].body, data.langs[lang].slug);
+
+				if (data.langs[lang].tags) {
+					_.each(data.langs[lang].tags.split(','), function (tagContent) {
+						addTagData(lang, _.trim(tagContent));
+					});
+				}
+			}
+		}
+	}
 
 	async.series(tasks, function (err) {
 		exports.emitter.emit(msgUuid, err);
@@ -244,3 +349,4 @@ exports.emitter	= new EventEmitter();
 exports.exchangeName	= 'larvitblog';
 exports.ready	= ready;
 exports.rmEntry	= rmEntry;
+exports.saveEntry	= saveEntry;

@@ -24,7 +24,7 @@
 		}
 	%>
 		<tr>
-			<td><a href="adminBlogpostEdit?langs=<% if(global.langs){print(global.langs.join(','));}else{print(lang);} %>&id=<%= entry.id %>"><%= entry.id %></a></td>
+			<td><a href="adminBlogpostEdit?langs=<% if(global.langs){print(global.langs.join(','));}else{print(lang);} %>&uuid=<%= entry.uuid %>"><%= entry.id %></a></td>
 			<td><%= entry.langs[lang].header %></td>
 			<td><%= _.moment(entry.created).format('YYYY-MM-DD') %></td>
 			<td><% if (entry.published) print(_.moment(entry.published).format('YYYY-MM-DD HH:mm:ss')); else print('No'); %></td>

@@ -1,14 +1,10 @@
 'use strict';
 
 const	topLogPrefix	= 'larvitblog: blog.js: ',
-	events	= require('events'),
-	eventEmitter	= new events.EventEmitter(),
 	dataWriter	= require(__dirname + '/dataWriter.js'),
-	slugify	= require('larvitslugify'),
-	async	= require('async'),
+	lUtils	= require('larvitutils'),
 	log	= require('winston'),
-	db	= require('larvitdb'),
-	_	= require('lodash');
+	db	= require('larvitdb');
 
 /**
  * Get blog entries
@@ -225,7 +221,7 @@ function rmEntry(uuid, cb) {
 
 	message.params.uuid	= uuid;
 
-	intercom.send(message, options, function (err, msgUuid) {
+	lUtils.instances.intercom.send(message, options, function (err, msgUuid) {
 		if (err) return cb(err);
 
 		dataWriter.emitter.once(msgUuid, cb);
@@ -236,7 +232,7 @@ function rmEntry(uuid, cb) {
  * Save an entry
  *
  * @param obj data - { // All options are optional!
- *                     'id': 1323,
+ *                     'uuid': '1323-adf234234-a23423-sdfa-232',
  *                     'published': dateObj,
  *                     'langs': {
  *                       'en': {
@@ -252,131 +248,20 @@ function rmEntry(uuid, cb) {
  * @param func cb(err, entry) - the entry will be a row from getEntries()
  */
 function saveEntry(data, cb) {
-	var tasks = [],
-	    lang;
+	const	options	= {'exchange': dataWriter.exchangeName},
+		message	= {};
 
-	if (typeof data === 'function') {
-		cb   = data;
-		data = {};
-	}
+	message.action	= 'saveEntry';
+	message.params	= {};
 
-	log.verbose('larvitblog: saveEntry() - Running with data. "' + JSON.stringify(data) + '"');
+	message.params.data = data;
 
-	// Make sure the database tables exists before going further!
-	if ( ! dbChecked) {
-		log.debug('larvitblog: saveEntry() - Database not checked, rerunning this method when event have been emitted.');
-		eventEmitter.on('checked', function () {
-			log.debug('larvitblog: saveEntry() - Database check event received, rerunning saveEntry().');
-			exports.saveEntry(data, cb);
-		});
+	lUtils.instances.intercom.send(message, options, function (err, msgUuid) {
+		if (err) return cb(err);
 
-		return;
-	}
-
-	// Create a new post id is not set
-	if (data.id === undefined) {
-		tasks.push(function (cb) {
-			var sql      = 'INSERT INTO blog_entries (created',
-				  dbFields = [];
-
-			if (data.published)
-				sql += ', published';
-
-			sql += ') VALUES(NOW()';
-
-			if (data.published) {
-				sql += ',?';
-				dbFields.push(data.published);
-			}
-
-			sql += ');';
-
-			db.query(sql, dbFields, function (err, result) {
-				if (err) {
-					cb(err);
-					return;
-				}
-
-				log.debug('larvitblog: saveEntry() - New blog entry created with id: "' + result.insertId + '"');
-				data.id = result.insertId;
-				cb();
-			});
-		});
-	} else {
-		// Erase previous data
-		tasks.push(function (cb) {
-			db.query('DELETE FROM blog_entriesData WHERE entryId = ?', [parseInt(data.id)], cb);
-		});
-
-		// Set published
-		if (data.published !== undefined) {
-			tasks.push(function (cb) {
-				var sql      = 'UPDATE blog_entries SET published = ? WHERE id = ?',
-				    dbFields = [data.published, data.id];
-
-				db.query(sql, dbFields, cb);
-			});
-		}
-	}
-
-	// We need to declare this outside the loop because of async operations
-	function addEntryData(lang, header, summary, body, slug) {
-		tasks.push(function (cb) {
-			var sql      = 'INSERT INTO blog_entriesData (entryId, lang, header, summary, body, slug) VALUES(?,?,?,?,?,?);',
-			    dbFields = [data.id, lang, header, summary, body, slug];
-
-			db.query(sql, dbFields, cb);
-		});
-	}
-
-	function addTagData(lang, content) {
-		tasks.push(function (cb) {
-			var sql      = 'INSERT INTO blog_entriesDataTags (entryId, lang, content) VALUES(?,?,?);',
-			    dbFields = [data.id, lang, content];
-
-			db.query(sql, dbFields, cb);
-		});
-	}
-
-	// Add content data
-	if (data.langs) {
-		tasks.push(function (cb) {
-			db.query('DELETE FROM blog_entriesDataTags WHERE entryId = ?', [data.id], cb);
-		});
-
-		for (lang in data.langs) {
-			if (data.langs[lang].slug)
-				data.langs[lang].slug = slugify(data.langs[lang].slug, {'save': '/'});
-
-			if (data.langs[lang].header || data.langs[lang].body || data.langs[lang].summary) {
-				addEntryData(lang, data.langs[lang].header, data.langs[lang].summary, data.langs[lang].body, data.langs[lang].slug);
-
-				if (data.langs[lang].tags) {
-					_.each(data.langs[lang].tags.split(','), function (tagContent) {
-						addTagData(lang, _.trim(tagContent));
-					});
-				}
-			}
-		}
-	}
-
-	async.series(tasks, function (err) {
-		if (err) {
-			cb(err);
-			return;
-		}
-
-		// Re-read this entry from the database to be sure to get the right deal!
-		getEntries({'ids': data.id}, function (err, entries) {
-			if (err) {
-				cb(err);
-				return;
-			}
-
-			cb(null, entries[0]);
-		});
+		dataWriter.emitter.once(msgUuid, cb);
 	});
-};
+}
 
 exports.getEntries = getEntries;
 exports.getTags    = getTags;

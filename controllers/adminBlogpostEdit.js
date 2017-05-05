@@ -6,11 +6,13 @@ var slugify = require('larvitslugify'),
     async   = require('async'),
     blog    = require('larvitblog'),
     db      = require('larvitdb'),
-    _       = require('lodash');
+    _       = require('lodash'),
+	uuidLib	= require('uuid'),
+	lUtils	= require('larvitutils');
 
 exports.run = function(req, res, callback) {
 	var data    = {'global': res.globalData},
-	    entryId = res.globalData.urlParsed.query.id,
+	    entryUuid = res.globalData.urlParsed.query.uuid,
 	    tasks   = [];
 
 	// Make sure the user have the correct rights
@@ -27,7 +29,7 @@ exports.run = function(req, res, callback) {
 		i = 0;
 		while (i !== 5) {
 			i ++;
-			slugs.push('blog_entry' + entryId + '_image' + i);
+			slugs.push('blog_entry' + entryUuid + '_image' + i);
 		}
 
 		imgLib.getImages({'slugs': slugs, 'limit': false}, function(err, dbImages) {
@@ -43,7 +45,7 @@ exports.run = function(req, res, callback) {
 	}
 
 	// Get possible images
-	if (entryId) {
+	if (entryUuid) {
 		tasks.push(getDbImages);
 	}
 
@@ -57,8 +59,8 @@ exports.run = function(req, res, callback) {
 			    field,
 			    lang;
 
-			if (entryId !== undefined)
-				saveObj.id = entryId;
+			if (entryUuid !== undefined)
+				saveObj.uuid = entryUuid;
 
 			// Define published
 			if (res.globalData.formFields.published) {
@@ -103,11 +105,11 @@ exports.run = function(req, res, callback) {
 					return;
 				}
 
-				// Redirect to a new URL if a new entryId was created
-				if ( ! entryId) {
+				// Redirect to a new URL if a new entryUuid was created
+				if ( ! entryUuid) {
 					res.statusCode = 302;
 					res.setHeader('Location', '/adminBlogpostEdit?id=' + entry.id + '&langs=' + res.globalData.urlParsed.query.langs);
-					entryId = entry.id;
+					entryUuid = entry.uuid;
 				}
 				cb();
 			});
@@ -134,7 +136,7 @@ exports.run = function(req, res, callback) {
 						else                                                       fileExt = false;
 
 						if (fileExt) {
-							slug = 'blog_entry' + entryId + '_image' + i + '.' + fileExt;
+							slug = 'blog_entry' + entryUuid + '_image' + i + '.' + fileExt;
 
 							newImages[slug] = {
 								'slug':         slug,
@@ -160,13 +162,13 @@ exports.run = function(req, res, callback) {
 								return;
 							}
 
-							db.query('DELETE FROM blog_entriesDataImages WHERE entryId = ? AND imgNr = ?', [entryId, imgNr], function(err) {
+							db.query('DELETE FROM blog_entriesDataImages WHERE entryUuid = ? AND imgNr = ?', [lUtils.uuidToBuffer(entryUuid), imgNr], function(err) {
 								if (err) {
 									cb(err);
 									return;
 								}
 
-								db.query('INSERT INTO blog_entriesDataImages (entryId, imgNr, uri) VALUES(?, ?, ?);', [entryId, imgNr, slug], cb);
+								db.query('INSERT INTO blog_entriesDataImages (entryUuid, imgNr, uri) VALUES(?, ?, ?);', [lUtils.uuidToBuffer(entryUuid), imgNr, slug], cb);
 							});
 						});
 					});
@@ -179,7 +181,7 @@ exports.run = function(req, res, callback) {
 
 				function addRmTask(imgNr) {
 					tasks.push(function(cb) {
-						imgLib.getImages({'slugs': 'blog_entry' + entryId + '_image' + imgNr}, function(err, images) {
+						imgLib.getImages({'slugs': 'blog_entry' + entryUuid + '_image' + imgNr}, function(err, images) {
 							if (err) {
 								cb(err);
 								return;
@@ -195,7 +197,7 @@ exports.run = function(req, res, callback) {
 					});
 
 					tasks.push(function(cb) {
-						db.query('DELETE FROM blog_entriesDataImages WHERE entryId = ? AND imgNr = ?', [entryId, imgNr], cb);
+						db.query('DELETE FROM blog_entriesDataImages WHERE entryUuid = ? AND imgNr = ?', [lUtils.uuidToBuffer(entryUuid), imgNr], cb);
 					});
 				}
 
@@ -215,9 +217,9 @@ exports.run = function(req, res, callback) {
 	}
 
 	// Delete an entry
-	if (res.globalData.formFields.delete !== undefined && entryId !== undefined) {
+	if (res.globalData.formFields.delete !== undefined && entryUuid !== undefined) {
 		tasks.push(function(cb) {
-			blog.rmEntry(entryId, function(err) {
+			blog.rmEntry(entryUuid, function(err) {
 				if (err) {
 					cb(err);
 					return;
@@ -231,9 +233,9 @@ exports.run = function(req, res, callback) {
 	}
 
 	// Load data from database
-	else if (entryId !== undefined) {
+	else if (entryUuid !== undefined) {
 		tasks.push(function(cb) {
-			blog.getEntries({'ids': entryId}, function(err, rows) {
+			blog.getEntries({'uuid': entryUuid}, function(err, rows) {
 				var lang;
 
 				if (rows[0] !== undefined) {
@@ -250,7 +252,7 @@ exports.run = function(req, res, callback) {
 						res.globalData.formFields['tags.'    + lang] = rows[0].langs[lang].tags;
 					}
 				} else {
-					cb(new Error('larvitblog: controllers/adminBlogpostEdit.js - Wrong entryId supplied'));
+					cb(new Error('larvitblog: controllers/adminBlogpostEdit.js - Wrong uuid supplied'));
 					return;
 				}
 
