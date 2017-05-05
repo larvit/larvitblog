@@ -267,3 +267,4 @@ exports.getEntries = getEntries;
 exports.getTags    = getTags;
 exports.rmEntry    = rmEntry;
 exports.saveEntry  = saveEntry;
+exports.dataWriter	= dataWriter;

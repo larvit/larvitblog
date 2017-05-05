@@ -279,8 +279,7 @@ function saveEntry(params, deliveryTag, msgUuid) {
 		db.query(sql, dbFields, function (err, result) {
 			if (err) return cb(err);
 
-			// todo: kolla här hur många rader som ändrats
-			if (result) {
+			if (result.affectedRows === 1) {
 				log.debug(logPrefix + 'New blog entry created with uuid: "' + data.uuid + '"');
 			}
 
@@ -288,7 +287,6 @@ function saveEntry(params, deliveryTag, msgUuid) {
 		});
 	});
 
-	// Set published
 	if (data.published !== undefined) {
 		tasks.push(function (cb) {
 			const sql      = 'UPDATE blog_entries SET published = ? WHERE uuid = ?',
@@ -298,6 +296,10 @@ function saveEntry(params, deliveryTag, msgUuid) {
 		});
 	}
 
+	// remove data. If blog post exists old data is removed and if not, nothing happens
+	tasks.push(function (cb) {
+		db.query('DELETE FROM blog_entriesData WHERE entryUuid = ?', [lUtils.uuidToBuffer(data.uuid)], cb);
+	});
 
 	// We need to declare this outside the loop because of async operations
 	function addEntryData(lang, header, summary, body, slug) {

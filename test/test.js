@@ -161,6 +161,37 @@ describe('Create blog post', function () {
 
 		async.series(tasks, done);
 	});
+
+	it('Edit blog post', function (done) {
+		const tasks	= [],
+			entry = {
+				'langs'	: {
+					'en' : {
+						'slug'	: moment().format('YYYY-MM-DD_') + slugify('Bacon, oh, sweet bacon', '-'),
+						'tags'	: 'Updated tags, bags',
+						'header'	: 'The second comming of the lord of bacon',
+						'summary'	: 'All hail the lord of bacon!',
+						'body'	: 'I love bacon, everybody loves bacon.'
+					}
+				},
+				'published'	: moment().toDate(),
+				'uuid'	: entryUuid
+			};
+
+		tasks.push(function (cb) {
+			blog.saveEntry(entry, cb);
+		});
+
+		tasks.push(function (cb) {
+			blog.getEntries({'uuid': entry.uuid}, function (err, entries) {
+				assert.strictEqual(err === null, true);
+				assert.strictEqual(entries.length, 1);
+				cb();
+			});
+		});
+
+		async.series(tasks, done);
+	});
 });
 
 describe('Get entries', function () {
@@ -169,7 +200,7 @@ describe('Get entries', function () {
 			assert.strictEqual(err === null, true);
 			assert.strictEqual(entries.length, 1);
 			assert.strictEqual(entries[0].uuid, entryUuid);
-			assert.strictEqual(entries[0].langs.en.tags.split(',').length, 4);
+			assert.strictEqual(entries[0].langs.en.tags.split(',').length, 2);
 			assert.strictEqual(entries[0].langs.en.summary, 'All hail the lord of bacon!');
 			done();
 		});

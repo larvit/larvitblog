@@ -12,7 +12,7 @@ var slugify = require('larvitslugify'),
 
 exports.run = function(req, res, callback) {
 	var data    = {'global': res.globalData},
-	    entryUuid = res.globalData.urlParsed.query.uuid,
+	    entryUuid = res.globalData.urlParsed.query.uuid || uuidLib.v1(),
 	    tasks   = [];
 
 	// Make sure the user have the correct rights
@@ -59,8 +59,7 @@ exports.run = function(req, res, callback) {
 			    field,
 			    lang;
 
-			if (entryUuid !== undefined)
-				saveObj.uuid = entryUuid;
+			saveObj.uuid = entryUuid;
 
 			// Define published
 			if (res.globalData.formFields.published) {
@@ -99,7 +98,7 @@ exports.run = function(req, res, callback) {
 				}
 			}
 
-			blog.saveEntry(saveObj, function(err, entry) {
+			blog.saveEntry(saveObj, function(err) {
 				if (err) {
 					cb(err);
 					return;
@@ -108,8 +107,7 @@ exports.run = function(req, res, callback) {
 				// Redirect to a new URL if a new entryUuid was created
 				if ( ! entryUuid) {
 					res.statusCode = 302;
-					res.setHeader('Location', '/adminBlogpostEdit?id=' + entry.id + '&langs=' + res.globalData.urlParsed.query.langs);
-					entryUuid = entry.uuid;
+					res.setHeader('Location', '/adminBlogpostEdit?uuid=' + entryUuid + '&langs=' + res.globalData.urlParsed.query.langs);
 				}
 				cb();
 			});
