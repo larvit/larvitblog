@@ -14,7 +14,7 @@
     "larvitdb": "^1.2.5",
     "larvitdbmigration": "^2.0.0",
     "larvitimages": "^0.6.0",
-    "slugify": "^1.1.0",
+    "larvitslugify": "^0.11.2",
     "lodash": "^4.17.4",
     "winston": "^2.3.1"
   },

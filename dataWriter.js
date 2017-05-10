@@ -9,7 +9,7 @@ const	EventEmitter	= require('events').EventEmitter,
 	async	= require('async'),
 	log	= require('winston'),
 	db	= require('larvitdb'),
-	slugify	= require('slugify'),
+	slugify	= require('larvitslugify'),
 	_	= require('lodash');
 
 

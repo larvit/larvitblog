@@ -111,7 +111,7 @@ function getEntries(options, cb) {
 
 		for (let i = 0; options.uuids[i] !== undefined; i ++) {
 			sql += '?,';
-			dbFields.push(options.uuids[i]);
+			dbFields.push(lUtils.uuidToBuffer(options.uuids[i]));
 		}
 
 		sql = sql.substring(0, sql.length - 1) + ')\n';

@@ -9,10 +9,10 @@ const	Intercom	= require('larvitamintercom'),
 	db	= require('larvitdb'),
 	fs	= require('fs'),
 	moment	= require('moment'),
-	slugify	= require('slugify'),
+	slugify	= require('larvitslugify'),
 	uuidLib	= require('uuid');
 
-let entryUuid = uuidLib.v1();
+let entryUuid = uuidLib.v1(), entryUuid2 = uuidLib.v1();
 
 blog.dataWriter	= require(__dirname + '/../dataWriter.js');
 blog.dataWriter.mode = 'master';
@@ -152,7 +152,38 @@ describe('Create blog post', function () {
 		});
 
 		tasks.push(function (cb) {
-			blog.getEntries({'uuid': entry.uuid}, function (err, entries) {
+			blog.getEntries({'uuids': entry.uuid}, function (err, entries) {
+				assert.strictEqual(err === null, true);
+				assert.strictEqual(entries.length, 1);
+				cb();
+			});
+		});
+
+		async.series(tasks, done);
+	});
+
+	it('Create a second post', function (done) {
+		const tasks	= [],
+			entry = {
+				'langs'	: {
+					'en' : {
+						'slug'	: moment().format('YYYY-MM-DD_') + slugify('One bottle of beer on the wall', '-'),
+						'tags'	: 'Beer,Bacon,Moar beer',
+						'header'	: 'Its all about the beer',
+						'summary'	: 'All hail the lord of beer!',
+						'body'	: 'I love beer, everybody loves beer.'
+					}
+				},
+				'published'	: moment().toDate(),
+				'uuid'	: entryUuid2
+			};
+
+		tasks.push(function (cb) {
+			blog.saveEntry(entry, cb);
+		});
+
+		tasks.push(function (cb) {
+			blog.getEntries({'uuids': entry.uuid}, function (err, entries) {
 				assert.strictEqual(err === null, true);
 				assert.strictEqual(entries.length, 1);
 				cb();
@@ -183,7 +214,7 @@ describe('Create blog post', function () {
 		});
 
 		tasks.push(function (cb) {
-			blog.getEntries({'uuid': entry.uuid}, function (err, entries) {
+			blog.getEntries({'uuids': entry.uuid}, function (err, entries) {
 				assert.strictEqual(err === null, true);
 				assert.strictEqual(entries.length, 1);
 				cb();
@@ -198,10 +229,14 @@ describe('Get entries', function () {
 	it('Get some ole entries', function (done) {
 		blog.getEntries({'uuid': entryUuid}, function (err, entries) {
 			assert.strictEqual(err === null, true);
-			assert.strictEqual(entries.length, 1);
-			assert.strictEqual(entries[0].uuid, entryUuid);
-			assert.strictEqual(entries[0].langs.en.tags.split(',').length, 2);
-			assert.strictEqual(entries[0].langs.en.summary, 'All hail the lord of bacon!');
+			assert.strictEqual(entries.length, 2);
+
+			for (const e of entries) {
+				assert.strictEqual(e.uuid === entryUuid || e.uuid === entryUuid2, true);
+				assert.notStrictEqual(e.langs.en.tags, undefined);
+				assert.notStrictEqual(e.langs.en.summary, undefined);
+			}
+
 			done();
 		});
 	});
@@ -218,7 +253,8 @@ describe('Remove entry', function () {
 		tasks.push(function (cb) {
 			blog.getEntries({'uuid': entryUuid}, function (err, entries) {
 				assert.strictEqual(err === null, true);
-				assert.strictEqual(entries.length, 0);
+				assert.strictEqual(entries.length, 1);
+				assert.strictEqual(entries[0].uuid, entryUuid2);
 				cb();
 			});
 		});
