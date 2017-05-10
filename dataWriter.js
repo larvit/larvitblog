@@ -328,7 +328,7 @@ function saveEntry(params, deliveryTag, msgUuid) {
 
 		for (const lang in data.langs) {
 			if (data.langs[lang].slug)
-				data.langs[lang].slug = slugify(data.langs[lang].slug, {'save': '/'});
+				data.langs[lang].slug = slugify(data.langs[lang].slug, {'save': ['/', '-']});
 
 			if (data.langs[lang].header || data.langs[lang].body || data.langs[lang].summary) {
 				addEntryData(lang, data.langs[lang].header, data.langs[lang].summary, data.langs[lang].body, data.langs[lang].slug);

@@ -1,16 +1,16 @@
 'use strict';
 
 var slugify = require('larvitslugify'),
-    moment  = require('moment'),
-    imgLib  = require('larvitimages'),
-    async   = require('async'),
-    blog    = require('larvitblog'),
-    db      = require('larvitdb'),
-    _       = require('lodash'),
+	moment  = require('moment'),
+	imgLib  = require('larvitimages'),
+	async   = require('async'),
+	blog    = require('larvitblog'),
+	db      = require('larvitdb'),
+	_       = require('lodash'),
 	uuidLib	= require('uuid'),
 	lUtils	= require('larvitutils');
 
-exports.run = function(req, res, callback) {
+exports.run = function (req, res, callback) {
 	var data    = {'global': res.globalData},
 	    entryUuid = res.globalData.urlParsed.query.uuid || uuidLib.v1(),
 	    tasks   = [];
@@ -32,7 +32,7 @@ exports.run = function(req, res, callback) {
 			slugs.push('blog_entry' + entryUuid + '_image' + i);
 		}
 
-		imgLib.getImages({'slugs': slugs, 'limit': false}, function(err, dbImages) {
+		imgLib.getImages({'slugs': slugs, 'limit': false}, function (err, dbImages) {
 			if (err) {
 				cb(err);
 				return;
@@ -45,7 +45,7 @@ exports.run = function(req, res, callback) {
 	}
 
 	// Get possible images
-	if (entryUuid) {
+	if (res.globalData.urlParsed.query.uuid) {
 		tasks.push(getDbImages);
 	}
 
@@ -53,7 +53,7 @@ exports.run = function(req, res, callback) {
 	if (res.globalData.formFields.save !== undefined) {
 
 		// Save input data (not images)
-		tasks.push(function(cb) {
+		tasks.push(function (cb) {
 			var saveObj = {'langs': {}},
 			    fieldName,
 			    field,
@@ -98,7 +98,7 @@ exports.run = function(req, res, callback) {
 				}
 			}
 
-			blog.saveEntry(saveObj, function(err) {
+			blog.saveEntry(saveObj, function (err) {
 				if (err) {
 					cb(err);
 					return;
@@ -114,7 +114,7 @@ exports.run = function(req, res, callback) {
 		});
 
 		// Save images
-		tasks.push(function(cb) {
+		tasks.push(function (cb) {
 			var newImages = {},
 			    tasks     = [],
 			    fieldName,
@@ -141,7 +141,7 @@ exports.run = function(req, res, callback) {
 								'uploadedFile': req.formFiles['image' + i]
 							};
 
-							_.each(data.dbImages, function(img) {
+							_.each(data.dbImages, function (img) {
 								if (img.slug.substring(0, img.slug.length - 4) === slug.substring(0, slug.length - 4)) {
 									newImages[slug].id = img.id;
 								}
@@ -151,16 +151,16 @@ exports.run = function(req, res, callback) {
 				}
 
 				function saveImg(slug) {
-					tasks.push(function(cb) {
+					tasks.push(function (cb) {
 						var imgNr = parseInt(slug.split('_')[2].substring(5));
 
-						imgLib.saveImage(newImages[slug], function(err) {
+						imgLib.saveImage(newImages[slug], function (err) {
 							if (err) {
 								cb(err);
 								return;
 							}
 
-							db.query('DELETE FROM blog_entriesDataImages WHERE entryUuid = ? AND imgNr = ?', [lUtils.uuidToBuffer(entryUuid), imgNr], function(err) {
+							db.query('DELETE FROM blog_entriesDataImages WHERE entryUuid = ? AND imgNr = ?', [lUtils.uuidToBuffer(entryUuid), imgNr], function (err) {
 								if (err) {
 									cb(err);
 									return;
@@ -178,8 +178,8 @@ exports.run = function(req, res, callback) {
 				}
 
 				function addRmTask(imgNr) {
-					tasks.push(function(cb) {
-						imgLib.getImages({'slugs': 'blog_entry' + entryUuid + '_image' + imgNr}, function(err, images) {
+					tasks.push(function (cb) {
+						imgLib.getImages({'slugs': 'blog_entry' + entryUuid + '_image' + imgNr}, function (err, images) {
 							if (err) {
 								cb(err);
 								return;
@@ -194,7 +194,7 @@ exports.run = function(req, res, callback) {
 						});
 					});
 
-					tasks.push(function(cb) {
+					tasks.push(function (cb) {
 						db.query('DELETE FROM blog_entriesDataImages WHERE entryUuid = ? AND imgNr = ?', [lUtils.uuidToBuffer(entryUuid), imgNr], cb);
 					});
 				}
@@ -216,8 +216,8 @@ exports.run = function(req, res, callback) {
 
 	// Delete an entry
 	if (res.globalData.formFields.delete !== undefined && entryUuid !== undefined) {
-		tasks.push(function(cb) {
-			blog.rmEntry(entryUuid, function(err) {
+		tasks.push(function (cb) {
+			blog.rmEntry(entryUuid, function (err) {
 				if (err) {
 					cb(err);
 					return;
@@ -231,9 +231,9 @@ exports.run = function(req, res, callback) {
 	}
 
 	// Load data from database
-	else if (entryUuid !== undefined) {
-		tasks.push(function(cb) {
-			blog.getEntries({'uuids': entryUuid}, function(err, rows) {
+	else if (data.global.urlParsed.query.uuid !== undefined) {
+		tasks.push(function (cb) {
+			blog.getEntries({'uuids': entryUuid}, function (err, rows) {
 				var lang;
 
 				if (rows[0] !== undefined) {
@@ -259,7 +259,7 @@ exports.run = function(req, res, callback) {
 		});
 	}
 
-	async.series(tasks, function(err) {
+	async.series(tasks, function (err) {
 		callback(err, req, res, data);
 	});
 };
