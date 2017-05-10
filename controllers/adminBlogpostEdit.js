@@ -233,7 +233,7 @@ exports.run = function(req, res, callback) {
 	// Load data from database
 	else if (entryUuid !== undefined) {
 		tasks.push(function(cb) {
-			blog.getEntries({'uuid': entryUuid}, function(err, rows) {
+			blog.getEntries({'uuids': entryUuid}, function(err, rows) {
 				var lang;
 
 				if (rows[0] !== undefined) {
