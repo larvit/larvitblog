@@ -202,6 +202,7 @@ function runDumpServer(cb) {
 	args.push(db.conf.database);
 
 	// Tables
+	args.push('blog_db_version');
 	args.push('blog_entries');
 	args.push('blog_entriesData');
 	args.push('blog_entriesDataTags');
