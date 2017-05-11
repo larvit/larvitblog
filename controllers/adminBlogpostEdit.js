@@ -15,6 +15,11 @@ exports.run = function (req, res, callback) {
 	    entryUuid = res.globalData.urlParsed.query.uuid || uuidLib.v1(),
 	    tasks   = [];
 
+	data.global.menuControllerName	= 'adminBlogpostEdit';
+	data.global.messages	= [];
+	data.global.errors	= [];
+
+
 	// Make sure the user have the correct rights
 	// This is set in larvitadmingui controllerGlobal
 	if ( ! res.adminRights) {
@@ -107,7 +112,7 @@ exports.run = function (req, res, callback) {
 				// Redirect to a new URL if a new entryUuid was created
 				if ( ! entryUuid) {
 					res.statusCode = 302;
-					res.setHeader('Location', '/adminBlogpostEdit?uuid=' + entryUuid + '&langs=' + res.globalData.urlParsed.query.langs);
+					res.setHeader('Location', '/adminBlogpostEdit?uuid=' + entryUuid + (res.globalData.urlParsed.query.langs === undefined ? '' : '&langs=' + res.globalData.urlParsed.query.langs));
 				}
 				cb();
 			});

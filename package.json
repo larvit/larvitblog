@@ -12,7 +12,7 @@
     "larvitamintercom": "^0.2.2",
     "larvitamsync": "^0.3.0",
     "larvitdb": "^1.2.5",
-    "larvitdbmigration": "^2.0.0",
+    "larvitdbmigration": "^2.0.3",
     "larvitimages": "^0.6.0",
     "larvitslugify": "^0.11.2",
     "lodash": "^4.17.4",
