@@ -4,14 +4,13 @@ const	EventEmitter	= require('events').EventEmitter,
 	eventEmitter	= new EventEmitter(),
 	topLogPrefix	= 'larvitblog: dataWriter.js: ',
 	DbMigration	= require('larvitdbmigration'),
+	slugify	= require('larvitslugify'),
 	lUtils	= require('larvitutils'),
 	amsync	= require('larvitamsync'),
 	async	= require('async'),
 	log	= require('winston'),
 	db	= require('larvitdb'),
-	slugify	= require('larvitslugify'),
 	_	= require('lodash');
-
 
 let	readyInProgress	= false,
 	isReady	= false,
