@@ -16,13 +16,14 @@
     "larvitimages": "^0.6.0",
     "larvitslugify": "^0.11.2",
     "lodash": "^4.17.4",
+    "uuid": "^3.0.1",
     "winston": "^2.3.1"
   },
   "description": "Simple blog module with admin GUI for larvitadmingui",
   "devDependencies": {
     "mocha": "^3.2.0",
-	"moment": "^2.18.1",
-	"eslint": "^3.12.2",
+    "moment": "^2.18.1",
+    "eslint": "^3.12.2",
     "mocha-eslint": "^3.0.1"
   },
   "keywords": [
