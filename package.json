@@ -15,6 +15,7 @@
     "larvitdbmigration": "^2.0.3",
     "larvitimages": "^0.6.0",
     "larvitslugify": "^0.11.2",
+    "larvitutils": "^1.1.1",
     "lodash": "^4.17.4",
     "uuid": "^3.0.1",
     "winston": "^2.3.1"
