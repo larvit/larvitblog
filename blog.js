@@ -15,7 +15,7 @@ const	topLogPrefix	= 'larvitblog: blog.js: ',
  *		'publishedAfter': dateObj,
  *		'publishedBefore': dateObj,
  *		'tags': ['dks', 'ccc'],
- *		'ids': [32,4],
+ *		'uuids': ['c7a5a178-394c-11e7-a919-92ebcb67fe33', 'cba7d0b6-394c-11e7-a919-92ebcb67fe33'],
  *		'limit': 10,
  *		'offset': 20
  *	}

@@ -1,21 +1,22 @@
 'use strict';
 
 const	Intercom	= require('larvitamintercom'),
-	blog	= require(__dirname + '/../blog.js'),
+	slugify	= require('larvitslugify'),
+	uuidLib	= require('uuid'),
+	moment	= require('moment'),
 	assert	= require('assert'),
 	lUtils	= require('larvitutils'),
+	blog	= require(__dirname + '/../blog.js'),
 	async	= require('async'),
 	log	= require('winston'),
 	db	= require('larvitdb'),
-	fs	= require('fs'),
-	moment	= require('moment'),
-	slugify	= require('larvitslugify'),
-	uuidLib	= require('uuid');
+	fs	= require('fs');
 
-let entryUuid = uuidLib.v1(), entryUuid2 = uuidLib.v1();
+let	entryUuid	= uuidLib.v1(),
+	entryUuid2	= uuidLib.v1();
 
 blog.dataWriter	= require(__dirname + '/../dataWriter.js');
-blog.dataWriter.mode = 'master';
+blog.dataWriter.mode	= 'master';
 
 // Set up winston
 log.remove(log.transports.Console);
@@ -77,36 +78,8 @@ before(function (done) {
 
 	// Setup intercom
 	tasks.push(function (cb) {
-		let confFile;
-
-		if (process.env.INTCONFFILE === undefined) {
-			confFile = __dirname + '/../config/amqp_test.json';
-		} else {
-			confFile = process.env.INTCONFFILE;
-		}
-
-		log.verbose('Intercom config file: "' + confFile + '"');
-
-		// First look for absolute path
-		fs.stat(confFile, function (err) {
-			if (err) {
-
-				// Then look for this string in the config folder
-				confFile = __dirname + '/../config/' + confFile;
-				fs.stat(confFile, function (err) {
-					if (err) throw err;
-					log.verbose('Intercom config: ' + JSON.stringify(require(confFile)));
-					lUtils.instances.intercom = new Intercom(require(confFile).default);
-					lUtils.instances.intercom.on('ready', cb);
-				});
-
-				return;
-			}
-
-			log.verbose('Intercom config: ' + JSON.stringify(require(confFile)));
-			lUtils.instances.intercom = new Intercom(require(confFile).default);
-			lUtils.instances.intercom.on('ready', cb);
-		});
+		lUtils.instances.intercom = new Intercom('loopback interface');
+		lUtils.instances.intercom.on('ready', cb);
 	});
 
 	tasks.push(function (cb) {
@@ -226,7 +199,7 @@ describe('Create blog post', function () {
 });
 
 describe('Get entries', function () {
-	it('Get some ole entries', function (done) {
+	it('Get some old entries', function (done) {
 		blog.getEntries({'uuid': entryUuid}, function (err, entries) {
 			assert.strictEqual(err === null, true);
 			assert.strictEqual(entries.length, 2);
