@@ -263,8 +263,35 @@ function saveEntry(data, cb) {
 	});
 }
 
+/**
+ * Sets images on an entry. Existing images on entry will be deleted so make sure to
+ * supply existing image if you want to keep em on the entry.
+ *
+ * @param obj data -	{
+ * 							'uuid': '1323-adf234234-a23423-sdfa-232', // uuid of blog post in question
+ * 							'images': [{'number': 1, 'uri': 'someUri.png'}] // array with objects containing image number and uri to image
+ * 						}
+ * @param func cb(err) - regular ol' callback
+ */
+function setImages(data, cb) {
+	const	options	= {'exchange': dataWriter.exchangeName},
+		message	= {};
+
+	message.action	= 'setImages';
+	message.params	= {};
+
+	message.params.data = data;
+
+	lUtils.instances.intercom.send(message, options, function (err, msgUuid) {
+		if (err) return cb(err);
+
+		dataWriter.emitter.once(msgUuid, cb);
+	});
+};
+
 exports.getEntries = getEntries;
 exports.getTags    = getTags;
 exports.rmEntry    = rmEntry;
 exports.saveEntry  = saveEntry;
+exports.setImages	= setImages;
 exports.dataWriter	= dataWriter;

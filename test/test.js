@@ -242,6 +242,37 @@ describe('Get entries', function () {
 	});
 });
 
+describe('Add images to entry', function () {
+	it('Add new image to entry', function (done) {
+		const tasks = [];
+
+		task.push(function (cb) {
+			blog.getEntries({'uuid': entryUuid}, function (err, entries) {
+				assert.strictEqual(err, null);
+				assert.strictEqual(entries.length, 1);
+				assert.strictEqual(entries.images, undefined);
+				cb();
+			});
+		});
+
+		tasks.push(function (cb) {
+			blog.setImages({'uuid': entryUuid, 'images': [{'number': 1, 'uri': '/some/image/file.png'}]}, cb);
+		});
+
+		task.push(function (cb) {
+			blog.getEntries({'uuid': entryUuid}, function (err, entries) {
+				assert.strictEqual(err, null);
+				assert.strictEqual(entries.length, 1);
+				assert.strictEqual(entries.images.length, 1);
+				assert.strictEqual(entries.images[0].uri, '/some/image/file.png');
+				cb();
+			});
+		});
+
+		async.series(tasks, done);
+	});
+});
+
 describe('Remove entry', function () {
 	it('Take er out behind the barn and shoot er', function (done) {
 		const tasks = [];

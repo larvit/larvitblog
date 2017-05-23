@@ -348,8 +348,40 @@ function saveEntry(params, deliveryTag, msgUuid) {
 	});
 }
 
+function setImages(params, deliveryTag, msgUuid) {
+	const options	= params.data,
+		logPrefix	= topLogPrefix + 'setImages() - ',
+		tasks	= [];
+
+	if (options.uuid === 'undefined ') {
+		const err = new Error('entryUuid not provided');
+		log.warn(logPrefix + err.message);
+		return exports.emitter.emit(msgUuid, err);
+	}
+
+	tasks.push(function (cb) {
+		db.query('DELETE FROM blog_entriesDataImages WHERE entryUuid = ?', [lUtils.uuidToBuffer(options.uuid)], function (err, rows) {
+			imgs = rows;
+			cb(err);
+		});
+	});
+
+	if (options.images !== undefined) {
+		for (const img of options.images) {
+			tasks.push(function (cb) {
+				db.query('INSERT INTO blog_entriesDataImages (entryUuid, imgNr, uri) VALUES(?, ?, ?);', [lUtils.uuidToBuffer(options.uuid), img.number, img.uri], cb);
+			});
+		}
+	}
+
+	async.series(tasks, function (err) {
+		exports.emitter.emit(msgUuid, err);
+	});
+};
+
 exports.emitter	= new EventEmitter();
 exports.exchangeName	= 'larvitblog';
 exports.ready	= ready;
 exports.rmEntry	= rmEntry;
 exports.saveEntry	= saveEntry;
+exports.setImages	= setImages;
