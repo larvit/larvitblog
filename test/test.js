@@ -200,7 +200,7 @@ describe('Create blog post', function () {
 
 describe('Get entries', function () {
 	it('Get some old entries', function (done) {
-		blog.getEntries({'uuid': entryUuid}, function (err, entries) {
+		blog.getEntries(function (err, entries) {
 			assert.strictEqual(err === null, true);
 			assert.strictEqual(entries.length, 2);
 
@@ -219,11 +219,11 @@ describe('Add images to entry', function () {
 	it('Add new image to entry', function (done) {
 		const tasks = [];
 
-		task.push(function (cb) {
-			blog.getEntries({'uuid': entryUuid}, function (err, entries) {
+		tasks.push(function (cb) {
+			blog.getEntries({'uuids': entryUuid}, function (err, entries) {
 				assert.strictEqual(err, null);
 				assert.strictEqual(entries.length, 1);
-				assert.strictEqual(entries.images, undefined);
+				assert.strictEqual(entries[0].images, null);
 				cb();
 			});
 		});
@@ -232,12 +232,63 @@ describe('Add images to entry', function () {
 			blog.setImages({'uuid': entryUuid, 'images': [{'number': 1, 'uri': '/some/image/file.png'}]}, cb);
 		});
 
-		task.push(function (cb) {
-			blog.getEntries({'uuid': entryUuid}, function (err, entries) {
+		tasks.push(function (cb) {
+			blog.getEntries({'uuids': entryUuid}, function (err, entries) {
 				assert.strictEqual(err, null);
 				assert.strictEqual(entries.length, 1);
-				assert.strictEqual(entries.images.length, 1);
-				assert.strictEqual(entries.images[0].uri, '/some/image/file.png');
+				assert.strictEqual(entries[0].images, '/some/image/file.png');
+				cb();
+			});
+		});
+
+		async.series(tasks, done);
+	});
+
+	it('Add an additional image', function (done) {
+
+		const tasks	= [];
+
+		let image = null;
+
+		tasks.push(function (cb) {
+			blog.getEntries({'uuids': entryUuid}, function (err, entries) {
+				assert.strictEqual(err, null);
+				assert.strictEqual(entries.length, 1);
+				assert.notStrictEqual(entries[0].images, null);
+				image = entries[0].images;
+				cb();
+			});
+		});
+
+		tasks.push(function (cb) {
+			blog.setImages({'uuid': entryUuid, 'images': [{'number': 1, 'uri': image}, {'number': 2, 'uri': '/some/other/uri.jpeg'}]}, cb);
+		});
+
+		tasks.push(function (cb) {
+			blog.getEntries({'uuids': entryUuid}, function (err, entries) {
+				assert.strictEqual(err, null);
+				assert.strictEqual(entries.length, 1);
+				assert.notStrictEqual(entries[0].images, undefined);
+				assert.strictEqual(entries[0].images.split(',').length, 2);
+				cb();
+			});
+		});
+
+		async.series(tasks, done);
+	});
+
+	it('Remove all images from entry', function (done) {
+		const tasks = [];
+
+		tasks.push(function (cb) {
+			blog.setImages({'uuid': entryUuid}, cb);
+		});
+
+		tasks.push(function (cb) {
+			blog.getEntries({'uuids': entryUuid}, function (err, entries) {
+				assert.strictEqual(err, null);
+				assert.strictEqual(entries.length, 1);
+				assert.strictEqual(entries[0].images, null);
 				cb();
 			});
 		});

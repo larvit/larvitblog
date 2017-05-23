@@ -359,10 +359,7 @@ function setImages(params, deliveryTag, msgUuid) {
 	}
 
 	tasks.push(function (cb) {
-		db.query('DELETE FROM blog_entriesDataImages WHERE entryUuid = ?', [lUtils.uuidToBuffer(options.uuid)], function (err, rows) {
-			imgs = rows;
-			cb(err);
-		});
+		db.query('DELETE FROM blog_entriesDataImages WHERE entryUuid = ?', [lUtils.uuidToBuffer(options.uuid)], cb);
 	});
 
 	if (options.images !== undefined) {
