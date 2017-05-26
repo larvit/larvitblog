@@ -51,7 +51,7 @@ function listenToQueue(retries, cb) {
 
 	intercom	= require('larvitutils').instances.intercom;
 
-	if ( ! (intercom instanceof require('larvitamintercom')) && retries < 100) {
+	if ( ! (intercom instanceof require('larvitamintercom')) && retries < 1000) {
 		retries ++;
 		setTimeout(function () {
 			listenToQueue(retries, cb);
