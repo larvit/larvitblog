@@ -51,13 +51,13 @@ function listenToQueue(retries, cb) {
 
 	intercom	= require('larvitutils').instances.intercom;
 
-	if ( ! (intercom instanceof require('larvitamintercom')) && retries < 1000) {
+	if ( ! intercom && retries < 1000) {
 		retries ++;
 		setTimeout(function () {
 			listenToQueue(retries, cb);
 		}, 50);
 		return;
-	} else if ( ! (intercom instanceof require('larvitamintercom'))) {
+	} else if ( ! intercom) {
 		log.error(logPrefix + 'Intercom is not set!');
 		return;
 	}
