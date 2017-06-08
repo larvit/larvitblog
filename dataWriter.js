@@ -49,7 +49,7 @@ function listenToQueue(retries, cb) {
 		return cb(err);
 	}
 
-	intercom	= require('larvitutils').instances.intercom;
+	intercom	= lUtils.instances.intercom;
 
 	if ( ! (intercom instanceof require('larvitamintercom')) && retries < 100) {
 		retries ++;
