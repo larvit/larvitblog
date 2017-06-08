@@ -1,6 +1,6 @@
 'use strict';
 
-var slugify = require('larvitslugify'),
+const slugify = require('larvitslugify'),
 	moment  = require('moment'),
 	imgLib  = require('larvitimages'),
 	async   = require('async'),
@@ -11,9 +11,12 @@ var slugify = require('larvitslugify'),
 	lUtils	= require('larvitutils');
 
 exports.run = function (req, res, callback) {
-	var data    = {'global': res.globalData},
+	const data    = {'global': res.globalData},
 	    entryUuid = res.globalData.urlParsed.query.uuid || uuidLib.v1(),
-	    tasks   = [];
+	    tasks   = [],
+		postImages	= [];
+
+	let updatePostImages = false;
 
 	data.global.menuControllerName	= 'adminBlogpostEdit';
 	data.global.messages	= [];
@@ -27,40 +30,34 @@ exports.run = function (req, res, callback) {
 		return;
 	}
 
-	function getDbImages(cb) {
-		var slugs = [],
-		    i;
-
-		i = 0;
-		while (i !== 5) {
-			i ++;
-			slugs.push('blog_entry' + entryUuid + '_image' + i);
-		}
-
-		imgLib.getImages({'slugs': slugs, 'limit': false}, function (err, dbImages) {
-			if (err) {
-				cb(err);
-				return;
-			}
-
-			data.dbImages = dbImages;
-
-			cb();
-		});
-	}
-
-	// Get possible images
-	if (res.globalData.urlParsed.query.uuid) {
-		tasks.push(getDbImages);
-	}
 
 	// Save a POSTed form
 	if (res.globalData.formFields.save !== undefined) {
 
+		// Load post images in case we need to remove some
+		tasks.push(function (cb) {
+			const sql = 'SELECT slug,uuid FROM images_images WHERE slug LIKE ?';
+
+			db.query(sql, ['blog_entry_' + entryUuid + '_image_%'], function (err, images) {
+				if (err) return cb(err);
+
+				for (const i of images) {
+					postImages.push({
+						'uuid'	: lUtils.formatUuid(i.uuid),
+						'slug'	: i.slug,
+						'uri'	: i.slug,
+						'number': i.slug.match(/blog_entry_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_image_(\d)\.\w+/)[1]
+					});
+				}
+
+				cb();
+			});
+		});
+
 		// Save input data (not images)
 		tasks.push(function (cb) {
-			var saveObj = {'langs': {}},
-			    fieldName,
+			const saveObj = {'langs': {}};
+			let	fieldName,
 			    field,
 			    lang;
 
@@ -118,105 +115,69 @@ exports.run = function (req, res, callback) {
 			});
 		});
 
-		// Save images
-		tasks.push(function (cb) {
-			var newImages = {},
-			    tasks     = [],
-			    fieldName,
-			    fileExt,
-			    slug,
-			    i;
-
-			if (req.formFiles !== undefined) {
-				i = 0;
-				while (i !== 5) {
-					i ++;
-
-					if (req.formFiles['image' + i] !== undefined && req.formFiles['image' + i].size !== 0) {
-						     if (req.formFiles['image' + i].type === 'image/png')  fileExt = 'png';
-						else if (req.formFiles['image' + i].type === 'image/jpeg') fileExt = 'jpg';
-						else if (req.formFiles['image' + i].type === 'image/gif')  fileExt = 'gif';
-						else                                                       fileExt = false;
-
-						if (fileExt) {
-							slug = 'blog_entry' + entryUuid + '_image' + i + '.' + fileExt;
-
-							newImages[slug] = {
-								'slug':         slug,
-								'uploadedFile': req.formFiles['image' + i]
-							};
-
-							_.each(data.dbImages, function (img) {
-								if (img.slug.substring(0, img.slug.length - 4) === slug.substring(0, slug.length - 4)) {
-									newImages[slug].id = img.id;
-								}
-							});
-						}
-					}
-				}
-
-				function saveImg(slug) {
-					tasks.push(function (cb) {
-						var imgNr = parseInt(slug.split('_')[2].substring(5));
-
-						imgLib.saveImage(newImages[slug], function (err) {
-							if (err) {
-								cb(err);
-								return;
-							}
-
-							db.query('DELETE FROM blog_entriesDataImages WHERE entryUuid = ? AND imgNr = ?', [lUtils.uuidToBuffer(entryUuid), imgNr], function (err) {
-								if (err) {
-									cb(err);
-									return;
-								}
-
-								db.query('INSERT INTO blog_entriesDataImages (entryUuid, imgNr, uri) VALUES(?, ?, ?);', [lUtils.uuidToBuffer(entryUuid), imgNr, slug], cb);
-							});
-						});
-					});
-				}
-
-				// Save the new ones
-				for (slug in newImages) {
-					saveImg(slug);
-				}
-
-				function addRmTask(imgNr) {
-					tasks.push(function (cb) {
-						imgLib.getImages({'slugs': 'blog_entry' + entryUuid + '_image' + imgNr}, function (err, images) {
-							if (err) {
-								cb(err);
-								return;
-							}
-
-							if (images.length) {
-								imgLib.rmImage(images[0].id, cb);
-								return;
-							}
-
-							cb();
-						});
-					});
+		if (req.formFields !== undefined) {
+			// Delete the delete-marked ones
+			for (const fieldName in req.formFields) {
+				if (fieldName.substring(0, 9) === 'rm_image_') {
+					updatePostImages = true;
+					_(postImages).remove(function (img) { return img.uuid === req.formFields[fieldName]; });
 
 					tasks.push(function (cb) {
-						db.query('DELETE FROM blog_entriesDataImages WHERE entryUuid = ? AND imgNr = ?', [lUtils.uuidToBuffer(entryUuid), imgNr], cb);
+						imgLib.rmImage(req.formFields[fieldName], cb);
 					});
 				}
-
-				// Delete the delete-marked ones
-				for (fieldName in req.formFields) {
-					if (fieldName.substring(0, 9) === 'rm_image_') {
-						addRmTask(fieldName.split('_')[2]);
-					}
-				}
-
-				// Re-read images from database
-				tasks.push(getDbImages);
-
-				async.series(tasks, cb);
 			}
-		});
+		}
+
+		// Add new images to post
+		if (req.formFiles !== undefined) {
+			const newImages = {};
+
+			let fileExt = null;
+
+			for (let i = 1; i < 6; i ++) {
+				if (req.formFiles['image' + i] !== undefined && req.formFiles['image' + i].size !== 0) {
+					if	(req.formFiles['image' + i].type === 'image/png')  fileExt = 'png';
+					else if	(req.formFiles['image' + i].type === 'image/jpeg') fileExt = 'jpg';
+					else if	(req.formFiles['image' + i].type === 'image/gif')  fileExt = 'gif';
+					else	fileExt = false;
+
+					if (fileExt) {
+						const slug = 'blog_entry_' + entryUuid + '_image_' + i + '.' + fileExt;
+
+						newImages[slug] = {
+							'slug':	slug,
+							'uuid':	uuidLib.v4(),
+							'file':	req.formFiles['image' + i],
+							'number':	i,
+							'uri':	slug
+						};
+
+						// postImges contains both new and old images since the images list is cleared and rewritten every time it changes
+						postImages.push(newImages[slug]);
+
+						updatePostImages = true;
+					}
+				}
+			}
+
+			for (const img in newImages) {
+				tasks.push(function (cb) {
+					imgLib.saveImage(newImages[img], cb);
+				});
+			}
+		}
+
+		if (updatePostImages) {
+			tasks.push(function (cb) {
+				const options = {
+					'uuid': entryUuid,
+					'images': postImages
+				};
+
+				blog.setImages(options, cb);
+			});
+		}
 	}
 
 	// Delete an entry
@@ -237,6 +198,9 @@ exports.run = function (req, res, callback) {
 
 	// Load data from database
 	else if (data.global.urlParsed.query.uuid !== undefined) {
+
+		let images = null;
+
 		tasks.push(function (cb) {
 			blog.getEntries({'uuids': entryUuid}, function (err, rows) {
 				var lang;
@@ -246,6 +210,8 @@ exports.run = function (req, res, callback) {
 						'created': rows[0].created,
 						'published': rows[0].published,
 					};
+
+					images = rows[0].images.split(',');
 
 					for (lang in rows[0].langs) {
 						res.globalData.formFields['header.'  + lang] = rows[0].langs[lang].header;
@@ -257,6 +223,28 @@ exports.run = function (req, res, callback) {
 				} else {
 					cb(new Error('larvitblog: controllers/adminBlogpostEdit.js - Wrong uuid supplied'));
 					return;
+				}
+
+				cb();
+			});
+		});
+
+		tasks.push(function (cb) {
+
+			if (images === null)  return cb();
+
+			if ( ! Array.isArray(images)) { images = [images]; }
+
+			imgLib.getImages({'slugs': images, 'limit': false}, function (err, dbImages) {
+				if (err) {
+					cb(err);
+					return;
+				}
+
+				data.dbImages = [];
+
+				for (const i in dbImages) {
+					data.dbImages.push(dbImages[i]);
 				}
 
 				cb();

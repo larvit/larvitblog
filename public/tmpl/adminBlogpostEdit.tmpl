@@ -79,54 +79,30 @@
 		</div>
 
 		<div class="row">
-			<% var i = 0; %>
-			<% while (i < 5) { %>
-				<% i ++; %>
 
-				<div class="two columns">
-					<label for="image<%= i %>">Img <%= i %></label>
-					<input type="file" name="image<%= i %>" />
-				</div>
-			<% } %>
-		</div>
+			<% for (let i = 1; i < 6; i ++)  { %>
+				 <div class="two columns">
+					 <label for="image<%= i %>">Img <%= i %></label>
 
-		<% if (global.urlParsed.query.uuid) { %>
-		<div class="row">
-			<% var i = 0; %>
-			<% while (i < 5) { %>
-				<% i ++; %>
-
-				<div class="two columns">
-					<% _.each(dbImages, function(image) { %>
-						<% if (image.slug.substring(0, 16 + global.urlParsed.query.uuid.toString().length + i.toString().length) === 'blog_entry' + global.urlParsed.query.uuid + '_image' + i) { %>
+					 	<% const image = _(obj.dbImages).find(function (x) { return Number(x.slug.match(/blog_entry_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_image_(\d)\.\w+/)[1]) === i; }); %>
+						<% if (image) { %>
+						<div>
 							<img src="/uploaded/images/<%= image.slug %>?width=200" alt="" style="width: 100%" />
-						<% } %>
-					<% }); %>
-					<p style="font-size: 1px; height: 1px;">&nbsp;</p>
-				</div>
-			<% } %>
-		</div>
+							<p style="font-size: 1px; height: 1px;">&nbsp;</p>
+						</div>
 
-		<div class="row">
-			<% var i = 0; %>
-			<% while (i < 5) { %>
-				<% i ++; %>
-
-				<div class="two columns">
-					<% _.each(dbImages, function(image) { %>
-						<% var shortSlug = 'blog_entry' + global.urlParsed.query.uuid + '_image' + i; %>
-						<% if (image.slug.substring(0, 16 + global.urlParsed.query.uuid.toString().length + i.toString().length) === shortSlug) { %>
-							<label for="<%= shortSlug %>">
-								<input type="checkbox" name="rm_image_<%= i %>" />
+						<div>
+							<label for="rm_image<%= i %>">
+								<input type="checkbox" name="rm_image_<%= i %>" value="<%= image.uuid %>" />
 								<span class="label-body">Delete</span>
 							</label>
-						<% } %>
-					<% }); %>
-					<p style="font-size: 1px; height: 1px;">&nbsp;</p>
+						</div>
+					<% } else { %>
+						<input type="file" name="image<%= i %>" />
+					<% } %>
 				</div>
 			<% } %>
 		</div>
-		<% } %>
 	</fieldset>
 	<% }); %>
 
