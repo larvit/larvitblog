@@ -352,6 +352,8 @@ function setImages(params, deliveryTag, msgUuid) {
 		logPrefix	= topLogPrefix + 'setImages() - ',
 		tasks	= [];
 
+	log.debug(logPrefix + 'Running with data: "' + JSON.stringify(options) + '"');
+
 	if (options.uuid === 'undefined ') {
 		const err = new Error('entryUuid not provided');
 		log.warn(logPrefix + err.message);
