@@ -248,7 +248,7 @@ function saveEntry(params, deliveryTag, msgUuid) {
 		tasks	= [],
 		 data	= params.data;
 
-	log.verbose(logPrefix + 'Running with data. "' + JSON.stringify(data) + '"');
+	log.debug(logPrefix + 'Running with data. "' + JSON.stringify(data) + '"');
 
 	// Create a new post id is not set
 	if (data.uuid === undefined) {
