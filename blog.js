@@ -221,7 +221,7 @@ function rmEntry(uuid, cb) {
 
 	message.params.uuid	= uuid;
 
-	lUtils.instances.intercom.send(message, options, function (err, msgUuid) {
+	dataWriter.intercom.send(message, options, function (err, msgUuid) {
 		if (err) return cb(err);
 
 		dataWriter.emitter.once(msgUuid, cb);
@@ -256,7 +256,7 @@ function saveEntry(data, cb) {
 
 	message.params.data = data;
 
-	lUtils.instances.intercom.send(message, options, function (err, msgUuid) {
+	dataWriter.intercom.send(message, options, function (err, msgUuid) {
 		if (err) return cb(err);
 
 		dataWriter.emitter.once(msgUuid, cb);
@@ -282,7 +282,7 @@ function setImages(data, cb) {
 
 	message.params.data = data;
 
-	lUtils.instances.intercom.send(message, options, function (err, msgUuid) {
+	dataWriter.intercom.send(message, options, function (err, msgUuid) {
 		if (err) return cb(err);
 
 		dataWriter.emitter.once(msgUuid, cb);

@@ -1,11 +1,9 @@
 'use strict';
 
-const	Intercom	= require('larvitamintercom'),
-	slugify	= require('larvitslugify'),
+const	slugify	= require('larvitslugify'),
 	uuidLib	= require('uuid'),
 	moment	= require('moment'),
 	assert	= require('assert'),
-	lUtils	= require('larvitutils'),
 	blog	= require(__dirname + '/../blog.js'),
 	async	= require('async'),
 	log	= require('winston'),
@@ -16,12 +14,11 @@ let	entryUuid	= uuidLib.v1(),
 	entryUuid2	= uuidLib.v1();
 
 blog.dataWriter	= require(__dirname + '/../dataWriter.js');
-blog.dataWriter.mode	= 'master';
 
 // Set up winston
 log.remove(log.transports.Console);
 /**/log.add(log.transports.Console, {
-	'level':	'warn',
+	'level':	'error',
 	'colorize':	true,
 	'timestamp':	true,
 	'json':	false
@@ -74,12 +71,6 @@ before(function (done) {
 
 			cb();
 		});
-	});
-
-	// Setup intercom
-	tasks.push(function (cb) {
-		lUtils.instances.intercom = new Intercom('loopback interface');
-		lUtils.instances.intercom.on('ready', cb);
 	});
 
 	tasks.push(function (cb) {
