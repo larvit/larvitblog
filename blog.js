@@ -190,8 +190,8 @@ function getTags(cb) {
 	let sql = 'SELECT COUNT(entryUuid) AS posts, lang, content FROM blog_entriesDataTags GROUP BY lang, content ORDER BY lang, COUNT(entryUuid) DESC;';
 
 	db.query(sql, function (err, rows) {
-		let tags = {'langs': {}},
-		    i;
+		let	tags	= {'langs': {}},
+			i;
 
 		if (err) return cb(err);
 
