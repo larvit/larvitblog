@@ -1,6 +1,6 @@
 {
   "name": "larvitblog",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -9,11 +9,12 @@
   "private": false,
   "dependencies": {
     "async": "^2.1.4",
+    "check-object-key": "^0.1.2",
     "larvitamintercom": "^0.2.2",
-    "larvitamsync": "^0.3.0",
+    "larvitamsync": "^0.5.1",
     "larvitdb": "^1.2.5",
     "larvitdbmigration": "^2.0.3",
-    "larvitimages": "^0.7.0",
+    "larvitimages": "^0.9.2",
     "larvitslugify": "^0.11.2",
     "larvitutils": "^1.1.1",
     "lodash": "^4.17.4",
@@ -22,10 +23,10 @@
   },
   "description": "Simple blog module with admin GUI for larvitadmingui",
   "devDependencies": {
-    "mocha": "^3.2.0",
+    "mocha": "^4.0.1",
     "moment": "^2.18.1",
-    "eslint": "^3.12.2",
-    "mocha-eslint": "^3.0.1"
+    "eslint": "^4.8.0",
+    "mocha-eslint": "^4.1.0"
   },
   "keywords": [
     "blog"

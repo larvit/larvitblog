@@ -1,5 +1,5 @@
 
--- hårdkodade namn, probläm?
+-- Is hard coded names a problem?
 ALTER TABLE blog_entriesData DROP FOREIGN KEY blog_entriesData_ibfk_1;
 ALTER TABLE blog_entriesDataImages DROP FOREIGN KEY blog_entriesDataImages_ibfk_1;
 ALTER TABLE blog_entriesDataTags DROP FOREIGN KEY blog_entriesDataTags_ibfk_2;

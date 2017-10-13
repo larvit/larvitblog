@@ -1,24 +1,23 @@
 'use strict';
 
-const	slugify	= require('larvitslugify'),
+const	Intercom	= require('larvitamintercom'),
+	slugify	= require('larvitslugify'),
 	uuidLib	= require('uuid'),
 	moment	= require('moment'),
 	assert	= require('assert'),
-	blog	= require(__dirname + '/../blog.js'),
 	async	= require('async'),
 	log	= require('winston'),
 	db	= require('larvitdb'),
 	fs	= require('fs');
 
 let	entryUuid	= uuidLib.v1(),
-	entryUuid2	= uuidLib.v1();
-
-blog.dataWriter	= require(__dirname + '/../dataWriter.js');
+	entryUuid2	= uuidLib.v1(),
+	blogLib;
 
 // Set up winston
 log.remove(log.transports.Console);
 /**/log.add(log.transports.Console, {
-	'level':	'error',
+	'level':	'warn',
 	'colorize':	true,
 	'timestamp':	true,
 	'json':	false
@@ -73,8 +72,16 @@ before(function (done) {
 		});
 	});
 
+	// Load lib
 	tasks.push(function (cb) {
-		blog.dataWriter.ready(cb);
+		blogLib	= require(__dirname + '/../blog.js');
+		blogLib.dataWriter.mode	= 'master';
+		blogLib.dataWriter.intercom	= new Intercom('loopback interface');
+		cb();
+	});
+
+	tasks.push(function (cb) {
+		blogLib.dataWriter.ready(cb);
 	});
 
 	async.series(tasks, done);
@@ -86,7 +93,7 @@ after(function (done) {
 
 describe('Sanity test', function () {
 	it('Get entries of empty database', function (done) {
-		blog.getEntries({}, function (err, entries) {
+		blogLib.getEntries({}, function (err, entries) {
 			assert.strictEqual(err === null, true);
 			assert.deepEqual(entries, []);
 			done();
@@ -112,11 +119,11 @@ describe('Create blog post', function () {
 			};
 
 		tasks.push(function (cb) {
-			blog.saveEntry(entry, cb);
+			blogLib.saveEntry(entry, cb);
 		});
 
 		tasks.push(function (cb) {
-			blog.getEntries({'uuids': entry.uuid}, function (err, entries) {
+			blogLib.getEntries({'uuids': entry.uuid}, function (err, entries) {
 				assert.strictEqual(err === null, true);
 				assert.strictEqual(entries.length, 1);
 				cb();
@@ -143,11 +150,11 @@ describe('Create blog post', function () {
 			};
 
 		tasks.push(function (cb) {
-			blog.saveEntry(entry, cb);
+			blogLib.saveEntry(entry, cb);
 		});
 
 		tasks.push(function (cb) {
-			blog.getEntries({'uuids': entry.uuid}, function (err, entries) {
+			blogLib.getEntries({'uuids': entry.uuid}, function (err, entries) {
 				assert.strictEqual(err === null, true);
 				assert.strictEqual(entries.length, 1);
 				cb();
@@ -174,11 +181,11 @@ describe('Create blog post', function () {
 			};
 
 		tasks.push(function (cb) {
-			blog.saveEntry(entry, cb);
+			blogLib.saveEntry(entry, cb);
 		});
 
 		tasks.push(function (cb) {
-			blog.getEntries({'uuids': entry.uuid}, function (err, entries) {
+			blogLib.getEntries({'uuids': entry.uuid}, function (err, entries) {
 				assert.strictEqual(err === null, true);
 				assert.strictEqual(entries.length, 1);
 				cb();
@@ -191,7 +198,7 @@ describe('Create blog post', function () {
 
 describe('Get entries', function () {
 	it('Get some old entries', function (done) {
-		blog.getEntries(function (err, entries) {
+		blogLib.getEntries(function (err, entries) {
 			assert.strictEqual(err === null, true);
 			assert.strictEqual(entries.length, 2);
 
@@ -211,7 +218,7 @@ describe('Add images to entry', function () {
 		const tasks = [];
 
 		tasks.push(function (cb) {
-			blog.getEntries({'uuids': entryUuid}, function (err, entries) {
+			blogLib.getEntries({'uuids': entryUuid}, function (err, entries) {
 				assert.strictEqual(err, null);
 				assert.strictEqual(entries.length, 1);
 				assert.strictEqual(entries[0].images, null);
@@ -220,11 +227,11 @@ describe('Add images to entry', function () {
 		});
 
 		tasks.push(function (cb) {
-			blog.setImages({'uuid': entryUuid, 'images': [{'number': 1, 'uri': '/some/image/file.png'}]}, cb);
+			blogLib.setImages({'uuid': entryUuid, 'images': [{'number': 1, 'uri': '/some/image/file.png'}]}, cb);
 		});
 
 		tasks.push(function (cb) {
-			blog.getEntries({'uuids': entryUuid}, function (err, entries) {
+			blogLib.getEntries({'uuids': entryUuid}, function (err, entries) {
 				assert.strictEqual(err, null);
 				assert.strictEqual(entries.length, 1);
 				assert.strictEqual(entries[0].images, '/some/image/file.png');
@@ -242,7 +249,7 @@ describe('Add images to entry', function () {
 		let image = null;
 
 		tasks.push(function (cb) {
-			blog.getEntries({'uuids': entryUuid}, function (err, entries) {
+			blogLib.getEntries({'uuids': entryUuid}, function (err, entries) {
 				assert.strictEqual(err, null);
 				assert.strictEqual(entries.length, 1);
 				assert.notStrictEqual(entries[0].images, null);
@@ -252,11 +259,11 @@ describe('Add images to entry', function () {
 		});
 
 		tasks.push(function (cb) {
-			blog.setImages({'uuid': entryUuid, 'images': [{'number': 1, 'uri': image}, {'number': 2, 'uri': '/some/other/uri.jpeg'}]}, cb);
+			blogLib.setImages({'uuid': entryUuid, 'images': [{'number': 1, 'uri': image}, {'number': 2, 'uri': '/some/other/uri.jpeg'}]}, cb);
 		});
 
 		tasks.push(function (cb) {
-			blog.getEntries({'uuids': entryUuid}, function (err, entries) {
+			blogLib.getEntries({'uuids': entryUuid}, function (err, entries) {
 				assert.strictEqual(err, null);
 				assert.strictEqual(entries.length, 1);
 				assert.notStrictEqual(entries[0].images, undefined);
@@ -272,11 +279,11 @@ describe('Add images to entry', function () {
 		const tasks = [];
 
 		tasks.push(function (cb) {
-			blog.setImages({'uuid': entryUuid}, cb);
+			blogLib.setImages({'uuid': entryUuid}, cb);
 		});
 
 		tasks.push(function (cb) {
-			blog.getEntries({'uuids': entryUuid}, function (err, entries) {
+			blogLib.getEntries({'uuids': entryUuid}, function (err, entries) {
 				assert.strictEqual(err, null);
 				assert.strictEqual(entries.length, 1);
 				assert.strictEqual(entries[0].images, null);
@@ -293,11 +300,11 @@ describe('Remove entry', function () {
 		const tasks = [];
 
 		tasks.push(function (cb) {
-			blog.rmEntry(entryUuid, cb);
+			blogLib.rmEntry(entryUuid, cb);
 		});
 
 		tasks.push(function (cb) {
-			blog.getEntries({'uuid': entryUuid}, function (err, entries) {
+			blogLib.getEntries({'uuid': entryUuid}, function (err, entries) {
 				assert.strictEqual(err === null, true);
 				assert.strictEqual(entries.length, 1);
 				assert.strictEqual(entries[0].uuid, entryUuid2);
