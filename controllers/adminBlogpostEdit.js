@@ -1,52 +1,50 @@
 'use strict';
 
-const slugify = require('larvitslugify'),
-	moment  = require('moment'),
-	imgLib  = require('larvitimages'),
-	async   = require('async'),
-	blog    = require('larvitblog'),
-	db      = require('larvitdb'),
-	_       = require('lodash'),
+const	topLogPrefix	= 'larvitblog: ./controllers/adminBlogpostEdit.js: ',
+	slugify	= require('larvitslugify'),
 	uuidLib	= require('uuid'),
-	lUtils	= require('larvitutils');
+	moment	= require('moment'),
+	imgLib	= require('larvitimages'),
+	lUtils	= require('larvitutils'),
+	async	= require('async'),
+	blog	= require('larvitblog'),
+	log	= require('winston'),
+	db	= require('larvitdb'),
+	_	= require('lodash');
 
-exports.run = function (req, res, callback) {
-	const data    = {'global': res.globalData},
-	    entryUuid = res.globalData.urlParsed.query.uuid || uuidLib.v1(),
-	    tasks   = [],
-		postImages	= [];
+exports.run = function run(req, res, cb) {
+	const	postImages	= [],
+		entryUuid	= res.globalData.urlParsed.query.uuid || uuidLib.v1(),
+		logPrefix	= topLogPrefix + 'run() - ',
+		tasks	= [],
+		data	= {'global': res.globalData};
 
-	let updatePostImages = false;
+	let	updatePostImages	= false;
 
 	data.global.menuControllerName	= 'adminBlogpostEdit';
 	data.global.messages	= [];
 	data.global.errors	= [];
 
-
 	// Make sure the user have the correct rights
 	// This is set in larvitadmingui controllerGlobal
-	if ( ! res.adminRights) {
-		callback(new Error('Invalid rights'), req, res, {});
-		return;
-	}
-
+	if ( ! res.adminRights) return cb(new Error('Invalid rights'), req, res, {});
 
 	// Save a POSTed form
 	if (res.globalData.formFields.save !== undefined) {
 
 		// Load post images in case we need to remove some
 		tasks.push(function (cb) {
-			const sql = 'SELECT slug,uuid FROM images_images WHERE slug LIKE ?';
+			const	sql	= 'SELECT slug, uuid FROM images_images WHERE slug LIKE ?';
 
 			db.query(sql, ['blog_entry_' + entryUuid + '_image_%'], function (err, images) {
 				if (err) return cb(err);
 
 				for (const i of images) {
 					postImages.push({
-						'uuid'	: lUtils.formatUuid(i.uuid),
-						'slug'	: i.slug,
-						'uri'	: i.slug,
-						'number': i.slug.match(/blog_entry_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_image_(\d)\.\w+/)[1]
+						'uuid':	lUtils.formatUuid(i.uuid),
+						'slug':	i.slug,
+						'uri':	i.slug,
+						'number':	i.slug.match(/blog_entry_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_image_(\d)\.\w+/)[1]
 					});
 				}
 
@@ -56,59 +54,57 @@ exports.run = function (req, res, callback) {
 
 		// Save input data (not images)
 		tasks.push(function (cb) {
-			const saveObj = {'langs': {}};
-			let	fieldName,
-			    field,
-			    lang;
+			const	saveObj	= {'langs': {}};
 
-			saveObj.uuid = entryUuid;
+			let	fieldName,
+				field,
+				lang;
+
+			saveObj.uuid	= entryUuid;
 
 			// Define published
 			if (res.globalData.formFields.published) {
 				try {
-					saveObj.published = moment(res.globalData.formFields.published).toDate();
+					saveObj.published	= moment(res.globalData.formFields.published).toDate();
 				} catch (err) {
-					log.warn('larvitblog: controllers/adminBlogpostEdit.js - Wrong published format, defaulting to now');
-					saveObj.published = moment().toDate();
+					log.warn(logPrefix + 'Wrong published format, defaulting to now');
+					saveObj.published	= moment().toDate();
 				}
 			} else {
-				saveObj.published = null;
+				saveObj.published	= null;
 			}
 
 			for (field in res.globalData.formFields) {
 				if (field.split('.').length === 2) {
-					fieldName = field.split('.')[0];
-					lang      = field.split('.')[1];
+					fieldName	= field.split('.')[0];
+					lang	= field.split('.')[1];
 
 					if (saveObj.langs[lang] === undefined)
-						saveObj.langs[lang] = {};
+						saveObj.langs[lang]	= {};
 
 					if (fieldName === 'slug') {
-						res.globalData.formFields[field] = _.trimEnd(res.globalData.formFields[field], '/');
+						res.globalData.formFields[field]	= _.trimEnd(res.globalData.formFields[field], '/');
 
 						// Auto generate slug if it is not set
 						if (res.globalData.formFields[field] === '' && saveObj.published !== null && res.globalData.formFields['header.' + lang] !== '') {
-							res.globalData.formFields[field] = moment(saveObj.published).format('YYYY-MM-DD_') + slugify(res.globalData.formFields['header.' + lang], '-');
+							res.globalData.formFields[field]	= moment(saveObj.published).format('YYYY-MM-DD_') + slugify(res.globalData.formFields['header.' + lang], '-');
 						}
 					}
 
 					if ( ! res.globalData.formFields[field]) {
-						saveObj.langs[lang][fieldName] = null;
+						saveObj.langs[lang][fieldName]	= null;
 					} else {
-						saveObj.langs[lang][fieldName] = res.globalData.formFields[field];
+						saveObj.langs[lang][fieldName]	= res.globalData.formFields[field];
 					}
 				}
 			}
 
 			blog.saveEntry(saveObj, function (err) {
-				if (err) {
-					cb(err);
-					return;
-				}
+				if (err) return cb(err);
 
 				// Redirect to a new URL if a new entryUuid was created
 				if ( ! entryUuid) {
-					res.statusCode = 302;
+					res.statusCode	= 302;
 					res.setHeader('Location', '/adminBlogpostEdit?uuid=' + entryUuid + (res.globalData.urlParsed.query.langs === undefined ? '' : '&langs=' + res.globalData.urlParsed.query.langs));
 				}
 				cb();
@@ -119,7 +115,7 @@ exports.run = function (req, res, callback) {
 			// Delete the delete-marked ones
 			for (const fieldName in req.formFields) {
 				if (fieldName.substring(0, 9) === 'rm_image_') {
-					updatePostImages = true;
+					updatePostImages	= true;
 					_(postImages).remove(function (img) { return img.uuid === req.formFields[fieldName]; });
 
 					tasks.push(function (cb) {
@@ -131,9 +127,9 @@ exports.run = function (req, res, callback) {
 
 		// Add new images to post
 		if (req.formFiles !== undefined) {
-			const newImages = {};
+			const	newImages	= {};
 
-			let fileExt = null;
+			let	fileExt	= null;
 
 			for (let i = 1; i < 6; i ++) {
 				if (req.formFiles['image' + i] !== undefined && req.formFiles['image' + i].size !== 0) {
@@ -143,7 +139,7 @@ exports.run = function (req, res, callback) {
 					else	fileExt = false;
 
 					if (fileExt) {
-						const slug = 'blog_entry_' + entryUuid + '_image_' + i + '.' + fileExt;
+						const	slug	= 'blog_entry_' + entryUuid + '_image_' + i + '.' + fileExt;
 
 						newImages[slug] = {
 							'slug':	slug,
@@ -156,7 +152,7 @@ exports.run = function (req, res, callback) {
 						// postImges contains both new and old images since the images list is cleared and rewritten every time it changes
 						postImages.push(newImages[slug]);
 
-						updatePostImages = true;
+						updatePostImages	= true;
 					}
 				}
 			}
@@ -171,8 +167,8 @@ exports.run = function (req, res, callback) {
 		if (updatePostImages) {
 			tasks.push(function (cb) {
 				const options = {
-					'uuid': entryUuid,
-					'images': postImages
+					'uuid':	entryUuid,
+					'images':	postImages
 				};
 
 				blog.setImages(options, cb);
@@ -184,13 +180,10 @@ exports.run = function (req, res, callback) {
 	if (res.globalData.formFields.delete !== undefined && entryUuid !== undefined) {
 		tasks.push(function (cb) {
 			blog.rmEntry(entryUuid, function (err) {
-				if (err) {
-					cb(err);
-					return;
-				}
+				if (err) return cb(err);
 
-				res.statusCode = 302;
-				res.setHeader('Location', '/adminBlogposts');
+				res.statusCode	= 302;
+				res.setHeader('Location',	'/adminBlogposts');
 				cb();
 			});
 		});
@@ -198,31 +191,31 @@ exports.run = function (req, res, callback) {
 
 	// Load data from database
 	else if (data.global.urlParsed.query.uuid !== undefined) {
-
-		let images = null;
+		let	images	= null;
 
 		tasks.push(function (cb) {
 			blog.getEntries({'uuids': entryUuid}, function (err, rows) {
-				var lang;
+				let	lang;
 
 				if (rows[0] !== undefined) {
 					res.globalData.formFields = {
-						'created': rows[0].created,
-						'published': rows[0].published,
+						'created':	rows[0].created,
+						'published':	rows[0].published,
 					};
 
-					images = rows[0].images.split(',');
+					images	= rows[0].images.split(',');
 
 					for (lang in rows[0].langs) {
-						res.globalData.formFields['header.'  + lang] = rows[0].langs[lang].header;
-						res.globalData.formFields['slug.'    + lang] = rows[0].langs[lang].slug;
-						res.globalData.formFields['summary.' + lang] = rows[0].langs[lang].summary;
-						res.globalData.formFields['body.'    + lang] = rows[0].langs[lang].body;
-						res.globalData.formFields['tags.'    + lang] = rows[0].langs[lang].tags;
+						res.globalData.formFields['header.'	+ lang] = rows[0].langs[lang].header;
+						res.globalData.formFields['slug.'	+ lang] = rows[0].langs[lang].slug;
+						res.globalData.formFields['summary.'	+ lang] = rows[0].langs[lang].summary;
+						res.globalData.formFields['body.'	+ lang] = rows[0].langs[lang].body;
+						res.globalData.formFields['tags.'	+ lang] = rows[0].langs[lang].tags;
 					}
 				} else {
-					cb(new Error('larvitblog: controllers/adminBlogpostEdit.js - Wrong uuid supplied'));
-					return;
+					const	err	= new Error('Wrong uuid supplied');
+					log.info(logPrefix + err.message);
+					return cb(err);
 				}
 
 				cb();
@@ -230,18 +223,16 @@ exports.run = function (req, res, callback) {
 		});
 
 		tasks.push(function (cb) {
+			if (images === null) return cb();
 
-			if (images === null)  return cb();
-
-			if ( ! Array.isArray(images)) { images = [images]; }
+			if ( ! Array.isArray(images)) {
+				images	= [images];
+			}
 
 			imgLib.getImages({'slugs': images, 'limit': false}, function (err, dbImages) {
-				if (err) {
-					cb(err);
-					return;
-				}
+				if (err) return cb(err);
 
-				data.dbImages = [];
+				data.dbImages	= [];
 
 				for (const i in dbImages) {
 					data.dbImages.push(dbImages[i]);
@@ -253,6 +244,6 @@ exports.run = function (req, res, callback) {
 	}
 
 	async.series(tasks, function (err) {
-		callback(err, req, res, data);
+		cb(err, req, res, data);
 	});
 };

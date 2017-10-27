@@ -24,7 +24,7 @@
 
 		<div class="row">
 			<div class="three columns">
-				<label for="id">Id</label>
+				<label for="uuid">Uuid</label>
 				<input type="text" value="<%= global.urlParsed.query.uuid %>" disabled="disabled" />
 			</div>
 
@@ -81,10 +81,20 @@
 		<div class="row">
 
 			<% for (let i = 1; i < 6; i ++)  { %>
-				 <div class="two columns">
-					 <label for="image<%= i %>">Img <%= i %></label>
+				<div class="two columns">
+					<label for="image<%= i %>">Img <%= i %></label>
+						<%
+							let image;
 
-					 	<% const image = _(obj.dbImages).find(function (x) { return Number(x.slug.match(/blog_entry_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_image_(\d)\.\w+/)[1]) === i; }); %>
+							if (Array.isArray(obj.dbImages)) {
+								for (let i2 = 0; obj.dbImages[i2] !== undefined; i2 ++) {
+									if (Number(obj.dbImages[i2].slug.substring(54, 55)) === i) {
+										image	= obj.dbImages[i2];
+									}
+								}
+							}
+						%>
+
 						<% if (image) { %>
 						<div>
 							<img src="/uploaded/images/<%= image.slug %>?width=200" alt="" style="width: 100%" />
