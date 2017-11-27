@@ -291,6 +291,7 @@ function setImages(data, cb) {
 
 exports.getEntries = getEntries;
 exports.getTags    = getTags;
+exports.options	= dataWriter.options;
 exports.rmEntry    = rmEntry;
 exports.saveEntry  = saveEntry;
 exports.setImages	= setImages;
