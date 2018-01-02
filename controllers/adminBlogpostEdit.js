@@ -203,7 +203,9 @@ exports.run = function run(req, res, cb) {
 						'published':	rows[0].published,
 					};
 
-					images	= rows[0].images.split(',');
+					if (rows[0].images) {
+						images	= rows[0].images.split(',');
+					}
 
 					for (lang in rows[0].langs) {
 						res.globalData.formFields['header.'	+ lang] = rows[0].langs[lang].header;
