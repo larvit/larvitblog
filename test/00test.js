@@ -31,10 +31,10 @@ before(function (done) {
 	tasks.push(function (cb) {
 		let confFile;
 
-		if (process.env.DBCONFFILE === undefined) {
+		if (process.argv[3] === undefined) {
 			confFile = __dirname + '/../config/db_test.json';
 		} else {
-			confFile = process.env.DBCONFFILE;
+			confFile = process.argv[3].split('=')[1];
 		}
 
 		log.verbose('DB config file: "' + confFile + '"');
