@@ -273,6 +273,12 @@ function rmEntry(params, deliveryTag, msgUuid) {
 	const	uuid	= lUtils.uuidToBuffer(params.uuid),
 		tasks	= [];
 
+	if (uuid === false) {
+		const e = new Error('Invalid uuid');
+		log.warn(topLogPrefix + 'rmEntry() - ' + e.message);
+		return exports.emitter.emit(msgUuid, e);
+	}
+
 	tasks.push(function (cb) {
 		db.query('DELETE FROM blog_entriesDataTags WHERE entryUuid = ?', [uuid], cb);
 	});
@@ -297,7 +303,8 @@ function rmEntry(params, deliveryTag, msgUuid) {
 function saveEntry(params, deliveryTag, msgUuid) {
 	const	logPrefix	= topLogPrefix + 'saveEntry() -',
 		tasks	= [],
-		data	= params.data;
+		data	= params.data,
+		uuidBuffer	= lUtils.uuidToBuffer(data.uuid);
 
 	log.debug(logPrefix + 'Running with data. "' + JSON.stringify(data) + '"');
 
@@ -307,12 +314,17 @@ function saveEntry(params, deliveryTag, msgUuid) {
 		return exports.emitter.emit(msgUuid, new Error('Uuid not set'));
 	}
 
+	if (uuidBuffer === undefined) {
+		log.warn(logPrefix + 'Invalid uuid set on blog post');
+		return exports.emitter.emit(msgUuid, new Error('Invalid uuid set on blog post'));
+	}
+
 	tasks.push(function (cb) {
 		const dbFields	= [];
 
 		let	sql	= 'INSERT IGNORE INTO blog_entries (uuid, created';
 
-		dbFields.push(lUtils.uuidToBuffer(data.uuid));
+		dbFields.push(uuidBuffer);
 
 		if (data.published) {
 			sql += ', published';
@@ -341,7 +353,7 @@ function saveEntry(params, deliveryTag, msgUuid) {
 	if (data.published !== undefined) {
 		tasks.push(function (cb) {
 			const	sql	= 'UPDATE blog_entries SET published = ? WHERE uuid = ?',
-				dbFields	= [data.published, lUtils.uuidToBuffer(data.uuid)];
+				dbFields	= [data.published, uuidBuffer];
 
 			db.query(sql, dbFields, cb);
 		});
@@ -349,14 +361,14 @@ function saveEntry(params, deliveryTag, msgUuid) {
 
 	// remove data. If blog post exists old data is removed and if not, nothing happens
 	tasks.push(function (cb) {
-		db.query('DELETE FROM blog_entriesData WHERE entryUuid = ?', [lUtils.uuidToBuffer(data.uuid)], cb);
+		db.query('DELETE FROM blog_entriesData WHERE entryUuid = ?', [uuidBuffer], cb);
 	});
 
 	// We need to declare this outside the loop because of async operations
 	function addEntryData(lang, header, summary, body, slug) {
 		tasks.push(function (cb) {
 			const	sql	= 'INSERT INTO blog_entriesData (entryUuid, lang, header, summary, body, slug) VALUES(?,?,?,?,?,?);',
-				dbFields	= [lUtils.uuidToBuffer(data.uuid), lang, header, summary, body, slug];
+				dbFields	= [uuidBuffer, lang, header, summary, body, slug];
 
 			db.query(sql, dbFields, cb);
 		});
@@ -365,7 +377,7 @@ function saveEntry(params, deliveryTag, msgUuid) {
 	function addTagData(lang, content) {
 		tasks.push(function (cb) {
 			const	sql	= 'INSERT INTO blog_entriesDataTags (entryUuid, lang, content) VALUES(?,?,?);',
-				dbFields	= [lUtils.uuidToBuffer(data.uuid), lang, content];
+				dbFields	= [uuidBuffer, lang, content];
 
 			db.query(sql, dbFields, cb);
 		});
@@ -374,7 +386,7 @@ function saveEntry(params, deliveryTag, msgUuid) {
 	// Add content data
 	if (data.langs !== undefined) {
 		tasks.push(function (cb) {
-			db.query('DELETE FROM blog_entriesDataTags WHERE entryUuid = ?', [lUtils.uuidToBuffer(data.uuid)], cb);
+			db.query('DELETE FROM blog_entriesDataTags WHERE entryUuid = ?', [uuidBuffer], cb);
 		});
 
 		for (const lang in data.langs) {
@@ -401,22 +413,29 @@ function saveEntry(params, deliveryTag, msgUuid) {
 function setImages(params, deliveryTag, msgUuid) {
 	const	options	= params.data,
 		logPrefix	= topLogPrefix + 'setImages() - ',
+		uuidBuffer	= lUtils.uuidToBuffer(options.uuid),
 		tasks	= [];
 
-	if (options.uuid === 'undefined ') {
+	if (options.uuid === undefined) {
 		const	err	= new Error('entryUuid not provided');
 		log.warn(logPrefix + err.message);
 		return exports.emitter.emit(msgUuid, err);
 	}
 
+	if (uuidBuffer === false) {
+		const	err	= new Error('Invalid entryUuid provided');
+		log.warn(logPrefix + err.message);
+		return exports.emitter.emit(msgUuid, err);
+	}
+
 	tasks.push(function (cb) {
-		db.query('DELETE FROM blog_entriesDataImages WHERE entryUuid = ?', [lUtils.uuidToBuffer(options.uuid)], cb);
+		db.query('DELETE FROM blog_entriesDataImages WHERE entryUuid = ?', [uuidBuffer], cb);
 	});
 
 	if (options.images !== undefined) {
 		for (const img of options.images) {
 			tasks.push(function (cb) {
-				db.query('INSERT INTO blog_entriesDataImages (entryUuid, imgNr, uri) VALUES(?, ?, ?);', [lUtils.uuidToBuffer(options.uuid), img.number, img.uri], cb);
+				db.query('INSERT INTO blog_entriesDataImages (entryUuid, imgNr, uri) VALUES(?, ?, ?);', [uuidBuffer, img.number, img.uri], cb);
 			});
 		}
 	}
