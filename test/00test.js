@@ -14,7 +14,7 @@ let	entryUuid	= uuidLib.v1(),
 	entryUuid2	= uuidLib.v1(),
 	blogLib;
 
-// Set up winston
+// Set up winsston
 log.remove(log.transports.Console);
 /**/log.add(log.transports.Console, {
 	'level':	'warn',
