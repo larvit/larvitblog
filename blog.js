@@ -314,7 +314,7 @@ function search(options, cb) {
 
 		sql += ' AND entryUuid IN (SELECT DISTINCT entryUuid FROM blog_entriesDataTags WHERE content IN (';
 
-		for (const t of tags) {
+		for (const t of options.tags) {
 			sql += '?,';
 			dbFields.push(t);
 		}
