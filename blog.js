@@ -297,9 +297,33 @@ function setImages(data, cb) {
 	});
 };
 
-function search(searchText, cb) {
-	const logPrefix = topLogPrefix + 'search() - ';
-	db.query('SELECT entryUuid FROM blog_entriesData WHERE MATCH (header,body,summary) AGAINST (? IN NATURAL LANGUAGE MODE)', [searchText], function (err, rows) {
+function search(options, cb) {
+	const logPrefix = topLogPrefix + 'search() - ',
+		dbFields	= [];
+
+	let sql = 'SELECT entryUuid FROM blog_entriesData WHERE MATCH (header,body,summary) AGAINST (? IN NATURAL LANGUAGE MODE)';
+
+	if (typeof options === 'string') {
+		dbFields.push(options);
+	} else {
+		dbFields.push(options.searchText);
+	}
+
+	if (options.tags && options.tags.length > 0) {
+		if ( ! Array.isArray(options.tags)) options.tags = [options.tags];
+
+		sql += ' AND entryUuid IN (SELECT DISTINCT entryUuid FROM blog_entriesDataTags WHERE content IN (';
+
+		for (const t of tags) {
+			sql += '?,';
+			dbFields.push(t);
+		}
+
+		sql = sql.substring(0, sql.length - 1);
+		sql += '))';
+	}
+
+	db.query(sql, dbFields, function (err, rows) {
 		const result = [];
 
 		if (err) {
