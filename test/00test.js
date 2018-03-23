@@ -116,7 +116,7 @@ describe('Create blog post', function () {
 						'body'	: 'I love bacon, everybody loves bacon.'
 					}
 				},
-				'published'	: moment().toDate(),
+				'published'	: moment().subtract(1, 'hours').toDate(), // I HATE TIMEZONES
 				'uuid'	: entryUuid
 			};
 
@@ -147,7 +147,7 @@ describe('Create blog post', function () {
 						'body'	: 'I love beer, everybody loves beer.'
 					}
 				},
-				'published'	: moment().toDate(),
+				'published'	: moment().subtract(1, 'hours').toDate(), // fucking timezones
 				'uuid'	: entryUuid2
 			};
 

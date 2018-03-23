@@ -301,7 +301,7 @@ function search(options, cb) {
 	const logPrefix = topLogPrefix + 'search() - ',
 		dbFields	= [];
 
-	let sql = 'SELECT entryUuid FROM blog_entriesData WHERE MATCH (header,body,summary) AGAINST (? IN NATURAL LANGUAGE MODE)';
+	let sql = 'SELECT entryUuid FROM blog_entriesData WHERE MATCH (header,body,summary) AGAINST (? IN NATURAL LANGUAGE MODE) AND entryUuid IN (SELECT uuid FROM blog_entries WHERE published <= NOW())';
 
 	if (typeof options === 'string') {
 		dbFields.push(options);
