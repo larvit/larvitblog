@@ -312,15 +312,10 @@ function search(options, cb) {
 	if (options.tags && options.tags.length > 0) {
 		if ( ! Array.isArray(options.tags)) options.tags = [options.tags];
 
-		sql += ' AND entryUuid IN (SELECT DISTINCT entryUuid FROM blog_entriesDataTags WHERE content IN (';
-
 		for (const t of options.tags) {
-			sql += '?,';
+			sql += ' AND entryUuid IN (SELECT DISTINCT entryUuid FROM blog_entriesDataTags WHERE content = ?)';
 			dbFields.push(t);
 		}
-
-		sql = sql.substring(0, sql.length - 1);
-		sql += '))';
 	}
 
 	db.query(sql, dbFields, function (err, rows) {
