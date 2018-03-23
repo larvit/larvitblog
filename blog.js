@@ -297,6 +297,24 @@ function setImages(data, cb) {
 	});
 };
 
+function search(searchText, cb) {
+	const logPrefix = topLogPrefix + 'search() - ';
+	db.query('SELECT entryUuid FROM blog_entriesData WHERE MATCH (header,body,summary) AGAINST (? IN NATURAL LANGUAGE MODE)', [searchText], function (err, rows) {
+		const result = [];
+
+		if (err) {
+			log.warn(logPrefix + 'search failed: ' + err.message);
+			cb(err);
+		}
+
+		for (const row of rows) {
+			result.push(lUtils.formatUuid(row.entryUuid));
+		}
+
+		cb(null, result);
+	});
+}
+
 exports.getEntries = getEntries;
 exports.getTags    = getTags;
 exports.options	= dataWriter.options;
@@ -304,3 +322,4 @@ exports.rmEntry    = rmEntry;
 exports.saveEntry  = saveEntry;
 exports.setImages	= setImages;
 exports.dataWriter	= dataWriter;
+exports.search	= search;

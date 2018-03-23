@@ -198,6 +198,20 @@ describe('Create blog post', function () {
 	});
 });
 
+describe('Search', function () {
+	it('do the full text search', function (done) {
+		blogLib.search('beer', function (err, uuids) {
+			if (err) throw err;
+			assert.strictEqual(uuids.length, 1);
+
+			blogLib.getEntries({'uuids': uuids}, function (err, entries) {
+				assert.strictEqual(entries[0].langs.en.header, 'Its all about the beer');
+				done();
+			});
+		});
+	});
+});
+
 describe('Get entries', function () {
 	it('Get some old entries', function (done) {
 		blogLib.getEntries(function (err, entries) {

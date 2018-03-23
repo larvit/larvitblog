@@ -1,0 +1,1 @@
+ALTER TABLE blog_entriesData ADD FULLTEXT(body, summary, header)
