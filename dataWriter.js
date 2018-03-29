@@ -302,20 +302,19 @@ function rmEntry(params, deliveryTag, msgUuid) {
 
 function rmImage(params, deliveryTag, msgUuid) {
 	const	logPrefix	= topLogPrefix + 'rmImage() -',
-		data	= params.data,
-		uuidBuffer	= lUtils.uuidToBuffer(data.uuid);
+		uuidBuffer	= lUtils.uuidToBuffer(params.uuid);
 
 	if (uuidBuffer === false) {
 		log.warn(logPrefix + 'Invalid uuid');
 		return exports.emitter.emit(msgUuid, new Error('Invalid uuid'));
 	}
 
-	if (isNaN(Number(data.imgNr))) {
+	if (isNaN(Number(params.imgNr))) {
 		log.warn(logPrefix + 'Invalid imgNr');
 		return exports.emitter.emit(msgUuid, new Error('Invalid imgNr'));
 	}
 
-	db.query('DELETE FROM blog_entriesDataImages WHERE entryUuid = ? AND imgNr = ?', [uuidBuffer, data.imgNr], function (err) {
+	db.query('DELETE FROM blog_entriesDataImages WHERE entryUuid = ? AND imgNr = ?', [uuidBuffer, params.imgNr], function (err) {
 		exports.emitter.emit(msgUuid, err);
 	});
 };
