@@ -236,6 +236,21 @@ function rmEntry(uuid, cb) {
 	});
 }
 
+function rmImage(options, cb) {
+	const	message	= {};
+
+	message.action	= 'rmImage';
+	message.params	= {};
+	message.params.uuid	= options.uuid;
+	message.params.imgNr	= options.imgNr;
+
+	dataWriter.intercom.send(message, {'exchange': dataWriter.exchangeName}, function (err, msgUuid) {
+		if (err) return cb(err);
+
+		dataWriter.emitter.once(msgUuid, cb);
+	});
+}
+
 /**
  * Save an entry
  *
@@ -338,6 +353,7 @@ exports.getEntries = getEntries;
 exports.getTags    = getTags;
 exports.options	= dataWriter.options;
 exports.rmEntry    = rmEntry;
+exports.rmImage	= rmImage;
 exports.saveEntry  = saveEntry;
 exports.setImages	= setImages;
 exports.dataWriter	= dataWriter;

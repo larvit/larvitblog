@@ -300,6 +300,26 @@ function rmEntry(params, deliveryTag, msgUuid) {
 	});
 }
 
+function rmImage(params, deliveryTag, msgUuid) {
+	const	logPrefix	= topLogPrefix + 'rmImage() -',
+		data	= params.data,
+		uuidBuffer	= lUtils.uuidToBuffer(data.uuid);
+
+	if (uuidBuffer === false) {
+		log.warn(logPrefix + 'Invalid uuid');
+		return exports.emitter.emit(msgUuid, new Error('Invalid uuid'));
+	}
+
+	if (isNaN(Number(data.imgNr))) {
+		log.warn(logPrefix + 'Invalid imgNr');
+		return exports.emitter.emit(msgUuid, new Error('Invalid imgNr'));
+	}
+
+	db.query('DELETE FROM blog_entriesDataImages WHERE entryUuid = ? AND imgNr = ?', [uuidBuffer, data.imgNr], function (err) {
+		exports.emitter.emit(msgUuid, err);
+	});
+};
+
 function saveEntry(params, deliveryTag, msgUuid) {
 	const	logPrefix	= topLogPrefix + 'saveEntry() -',
 		tasks	= [],
@@ -454,5 +474,6 @@ exports.exchangeName	= 'larvitblog';
 exports.options	= undefined;
 exports.ready	= ready;
 exports.rmEntry	= rmEntry;
+exports.rmImage = rmImage;
 exports.saveEntry	= saveEntry;
 exports.setImages	= setImages;
