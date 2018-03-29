@@ -416,6 +416,8 @@ function setImages(params, deliveryTag, msgUuid) {
 		uuidBuffer	= lUtils.uuidToBuffer(options.uuid),
 		tasks	= [];
 
+	if (options.delete === undefined) options.delete = true; // this is the default behavior
+
 	if (options.uuid === undefined) {
 		const	err	= new Error('entryUuid not provided');
 		log.warn(logPrefix + err.message);
@@ -428,9 +430,11 @@ function setImages(params, deliveryTag, msgUuid) {
 		return exports.emitter.emit(msgUuid, err);
 	}
 
-	tasks.push(function (cb) {
-		db.query('DELETE FROM blog_entriesDataImages WHERE entryUuid = ?', [uuidBuffer], cb);
-	});
+	if (options.delete) {
+		tasks.push(function (cb) {
+			db.query('DELETE FROM blog_entriesDataImages WHERE entryUuid = ?', [uuidBuffer], cb);
+		});
+	}
 
 	if (options.images !== undefined) {
 		for (const img of options.images) {
