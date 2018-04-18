@@ -320,7 +320,7 @@ function rmImage(params, deliveryTag, msgUuid) {
 };
 
 function saveEntry(params, deliveryTag, msgUuid) {
-	const	logPrefix	= topLogPrefix + 'saveEntry() -',
+	const	logPrefix	= topLogPrefix + 'saveEntry() - ',
 		tasks	= [],
 		data	= params.data,
 		uuidBuffer	= lUtils.uuidToBuffer(data.uuid);
@@ -338,6 +338,37 @@ function saveEntry(params, deliveryTag, msgUuid) {
 		return exports.emitter.emit(msgUuid, new Error('Invalid uuid set on blog post'));
 	}
 
+	// Check if slugs already exists
+	if (data.langs !== undefined) {
+
+		tasks.push(function (cb) {
+			const	dbFields	= [];
+
+			let	sql	= 'SELECT * FROM blog_entriesData WHERE slug IN (';
+
+			for (const lang in data.langs) {
+				sql += '?,';
+				dbFields.push(slugify(data.langs[lang].slug, {'save': ['/', '-']}));
+			}
+
+			sql = sql.substring(0, sql.length - 1) + ') ';
+			sql += 'AND entryUuid != ?';
+			dbFields.push(uuidBuffer);
+
+			db.query(sql, dbFields, function (err, result) {
+				if (err) return cb(err);
+
+				if (result.length > 0) {
+					log.debug(logPrefix + 'Slug already exists');
+					return cb(new Error('Slug already exists'));
+				}
+
+				cb();
+			});
+		});
+	}
+
+	// Save blog uuid
 	tasks.push(function (cb) {
 		const dbFields	= [];
 
@@ -369,6 +400,7 @@ function saveEntry(params, deliveryTag, msgUuid) {
 		});
 	});
 
+	// save when published (move?)
 	if (data.published !== undefined) {
 		tasks.push(function (cb) {
 			const	sql	= 'UPDATE blog_entries SET published = ? WHERE uuid = ?',
@@ -381,6 +413,11 @@ function saveEntry(params, deliveryTag, msgUuid) {
 	// remove data. If blog post exists old data is removed and if not, nothing happens
 	tasks.push(function (cb) {
 		db.query('DELETE FROM blog_entriesData WHERE entryUuid = ?', [uuidBuffer], cb);
+	});
+
+	// remove tags. If blog post exists old tags is removed and if not, nothing happens
+	tasks.push(function (cb) {
+		db.query('DELETE FROM blog_entriesDataTags WHERE entryUuid = ?', [uuidBuffer], cb);
 	});
 
 	// We need to declare this outside the loop because of async operations
@@ -404,10 +441,6 @@ function saveEntry(params, deliveryTag, msgUuid) {
 
 	// Add content data
 	if (data.langs !== undefined) {
-		tasks.push(function (cb) {
-			db.query('DELETE FROM blog_entriesDataTags WHERE entryUuid = ?', [uuidBuffer], cb);
-		});
-
 		for (const lang in data.langs) {
 			if (data.langs[lang].slug)
 				data.langs[lang].slug = slugify(data.langs[lang].slug, {'save': ['/', '-']});

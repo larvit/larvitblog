@@ -12,6 +12,7 @@ const	Intercom	= require('larvitamintercom'),
 
 let	entryUuid	= uuidLib.v1(),
 	entryUuid2	= uuidLib.v1(),
+	entryUuid3	= uuidLib.v1(),
 	blogLib;
 
 // Set up winsston
@@ -110,7 +111,7 @@ describe('Create blog post', function () {
 				'langs'	: {
 					'en' : {
 						'slug'	: moment().format('YYYY-MM-DD_') + slugify('Bacon, oh, sweet bacon', '-'),
-						'tags'	: 'Taaags, Baags, Bag ladies, Bacon',
+						'tags'	: 'Taaags,Baags,Bag ladies,Bacon',
 						'header'	: 'The second comming of the lord of bacon',
 						'summary'	: 'All hail the lord of bacon!',
 						'body'	: 'I love bacon, everybody loves bacon.'
@@ -128,6 +129,11 @@ describe('Create blog post', function () {
 			blogLib.getEntries({'uuids': entry.uuid}, function (err, entries) {
 				assert.strictEqual(err === null, true);
 				assert.strictEqual(entries.length, 1);
+				assert.strictEqual(entries[0].langs.en.slug, entry.langs.en.slug);
+				assert.strictEqual(entries[0].langs.en.tags, entry.langs.en.tags);
+				assert.strictEqual(entries[0].langs.en.header, entry.langs.en.header);
+				assert.strictEqual(entries[0].langs.en.summary, entry.langs.en.summary);
+				assert.strictEqual(entries[0].langs.en.body, entry.langs.en.body);
 				cb();
 			});
 		});
@@ -159,11 +165,73 @@ describe('Create blog post', function () {
 			blogLib.getEntries({'uuids': entry.uuid}, function (err, entries) {
 				assert.strictEqual(err === null, true);
 				assert.strictEqual(entries.length, 1);
+				assert.strictEqual(entries[0].langs.en.slug, entry.langs.en.slug);
+				assert.strictEqual(entries[0].langs.en.tags, entry.langs.en.tags);
+				assert.strictEqual(entries[0].langs.en.header, entry.langs.en.header);
+				assert.strictEqual(entries[0].langs.en.summary, entry.langs.en.summary);
+				assert.strictEqual(entries[0].langs.en.body, entry.langs.en.body);
 				cb();
 			});
 		});
 
 		async.series(tasks, done);
+	});
+
+	it('Update previous post', function (done) {
+		const tasks	= [],
+			entry = {
+				'langs'	: {
+					'en' : {
+						'slug'	: moment().format('YYYY-MM-DD_') + slugify('One bottle of beer on the floor', '-'),
+						'tags'	: 'Beer,Bacon,Moar beer,Ham',
+						'header'	: 'Its all about the beer',
+						'summary'	: 'All hail the lord of beer!',
+						'body'	: 'I love beer, but not everybody loves beer.'
+					}
+				},
+				'published'	: moment().subtract(3, 'hours').toDate(), // fucking timezones
+				'uuid'	: entryUuid2
+			};
+
+		tasks.push(function (cb) {
+			blogLib.saveEntry(entry, cb);
+		});
+
+		tasks.push(function (cb) {
+			blogLib.getEntries({'uuids': entry.uuid}, function (err, entries) {
+				assert.strictEqual(err === null, true);
+				assert.strictEqual(entries.length, 1);
+				assert.strictEqual(entries[0].langs.en.slug, entry.langs.en.slug);
+				assert.strictEqual(entries[0].langs.en.tags, entry.langs.en.tags);
+				assert.strictEqual(entries[0].langs.en.header, entry.langs.en.header);
+				assert.strictEqual(entries[0].langs.en.summary, entry.langs.en.summary);
+				assert.strictEqual(entries[0].langs.en.body, entry.langs.en.body);
+				cb();
+			});
+		});
+
+		async.series(tasks, done);
+	});
+
+	it('Dont save entry when slugs already exists', function (done) {
+		const entry = {
+			'langs'	: {
+				'en' : {
+					'slug'	: moment().format('YYYY-MM-DD_') + slugify('One bottle of beer on the floor', '-'),
+					'tags'	: 'Beer,Bacon,Moar beer',
+					'header'	: 'Its not about the beer',
+					'summary'	: 'You\'re wrong!!',
+					'body'	: 'I hate beer, no one loves beer.'
+				}
+			},
+			'published'	: moment().subtract(1, 'hours').toDate(), // fucking timezones
+			'uuid'	: entryUuid3
+		};
+
+		blogLib.saveEntry(entry, function (err) {
+			assert.strictEqual(err !== null, true);
+			done();
+		});
 	});
 
 	it('Edit blog post', function (done) {
@@ -198,6 +266,9 @@ describe('Create blog post', function () {
 	});
 });
 
+
+
+
 describe('Search', function () {
 	it('do the full text search', function (done) {
 		blogLib.search('beer', function (err, uuids) {
@@ -215,6 +286,7 @@ describe('Search', function () {
 describe('Get entries', function () {
 	it('Get some old entries', function (done) {
 		blogLib.getEntries(function (err, entries) {
+
 			assert.strictEqual(err === null, true);
 			assert.strictEqual(entries.length, 2);
 
