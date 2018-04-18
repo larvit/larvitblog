@@ -246,6 +246,7 @@ exports.run = function run(req, res, cb) {
 	}
 
 	async.series(tasks, function (err) {
-		cb(err, req, res, data);
+		if (err) data.global.errors = [err.message];
+		cb(null, req, res, data);
 	});
 };
