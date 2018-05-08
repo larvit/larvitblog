@@ -338,6 +338,11 @@ function saveEntry(params, deliveryTag, msgUuid) {
 		return exports.emitter.emit(msgUuid, new Error('Invalid uuid set on blog post'));
 	}
 
+	if (data.published && ! data.published instanceof Date) {
+		log.info(logPrefix + 'Invalid "published" value, not an instance of Date');
+		return exports.emitter.emit(msgUuid, new Error('Invalid "published" value, not an instance of Date'));
+	}
+
 	// Check if slugs already exists
 	if (data.langs !== undefined) {
 

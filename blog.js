@@ -32,6 +32,18 @@ function getEntries(options, cb) {
 		options = {};
 	}
 
+	if (options.publishedAfter && ! options.publishedAfter instanceof Date) {
+		const err = new Error('Invalid date format, publishedAfter is not an instance of Date');
+		log.verbose(logPrefix + err.message);
+		return cb(err);
+	}
+
+	if (options.publishedBefore && ! options.publishedBefore instanceof Date) {
+		const err = new Error('Invalid date format, publishedBefore is not an instance of Date');
+		log.verbose(logPrefix + err.message);
+		return cb(err);
+	}
+
 	log.debug(logPrefix + 'Called with options: "' + JSON.stringify(options) + '"');
 
 	// Make sure options that should be arrays actually are arrays
@@ -128,13 +140,13 @@ function getEntries(options, cb) {
 	// Only get posts published after a certain date
 	if (options.publishedAfter) {
 		sql += '	AND e.published > ?\n';
-		dbFields.push(new Date(options.publishedAfter));
+		dbFields.push(options.publishedAfter);
 	}
 
 	// Only get posts published before a certain date
 	if (options.publishedBefore) {
 		sql += '	AND e.published < ?\n';
-		dbFields.push(new Date(options.publishedBefore));
+		dbFields.push(options.publishedBefore);
 	}
 
 	sql += 'GROUP BY e.uuid, ed.lang\n';
