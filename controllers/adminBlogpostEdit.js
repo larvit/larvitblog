@@ -187,10 +187,9 @@ exports.run = function run(req, res, cb) {
 				cb();
 			});
 		});
-	}
 
 	// Load data from database
-	else if (data.global.urlParsed.query.uuid !== undefined) {
+	} else if (data.global.urlParsed.query.uuid !== undefined) {
 		let	images	= null;
 
 		tasks.push(function (cb) {
