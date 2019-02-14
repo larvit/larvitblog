@@ -9,24 +9,23 @@
   "private": false,
   "dependencies": {
     "async": "^2.1.4",
-    "check-object-key": "^0.1.2",
-    "larvitamintercom": "^0.2.2",
-    "larvitamsync": "^0.5.1",
-    "larvitdb": "^1.2.5",
-    "larvitdbmigration": "^2.0.3",
-    "larvitimages": "^0.9.2",
+    "larvitamintercom": "^0.3.4",
+    "larvitamsync": "^0.7.3",
+    "larvitdb": "^2.1.1",
+    "larvitdbmigration": "^4.0.2",
+    "larvitimages": "^0.10.6",
     "larvitslugify": "^0.11.2",
-    "larvitutils": "^1.1.1",
+    "larvitutils": "^2.1.0",
     "lodash": "^4.17.4",
     "uuid": "^3.0.1",
     "winston": "^2.3.1"
   },
   "description": "Simple blog module with admin GUI for larvitadmingui",
   "devDependencies": {
+    "eslint": "^5.13.0",
     "mocha": "^5.1.1",
-    "moment": "^2.18.1",
-    "eslint": "^4.8.0",
-    "mocha-eslint": "^4.1.0"
+    "mocha-eslint": "^5.0.0",
+    "moment": "^2.18.1"
   },
   "keywords": [
     "blog"

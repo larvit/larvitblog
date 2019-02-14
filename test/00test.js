@@ -1,51 +1,53 @@
 'use strict';
 
-const	Intercom	= require('larvitamintercom'),
-	slugify	= require('larvitslugify'),
-	uuidLib	= require('uuid'),
-	moment	= require('moment'),
-	assert	= require('assert'),
-	async	= require('async'),
-	log	= require('winston'),
-	db	= require('larvitdb'),
-	fs	= require('fs');
+const Intercom = require('larvitamintercom');
+const Blog = require(__dirname + '/../blog.js');
+const LUtils = require('larvitutils');
+const lUtils = new LUtils();
+const slugify = require('larvitslugify');
+const uuidLib = require('uuid');
+const moment = require('moment');
+const assert = require('assert');
+const async = require('async');
+const log = require('winston');
+const db = require('larvitdb');
+const fs = require('fs');
 
-let	entryUuid	= uuidLib.v1(),
-	entryUuid2	= uuidLib.v1(),
-	entryUuid3	= uuidLib.v1(),
-	blogLib;
+let entryUuid = uuidLib.v1();
+let entryUuid2 = uuidLib.v1();
+let entryUuid3 = uuidLib.v1();
+let blogLib;
 
 // Set up winsston
 log.remove(log.transports.Console);
 /**/log.add(log.transports.Console, {
-	'level':	'warn',
-	'colorize':	true,
-	'timestamp':	true,
-	'json':	false
+	level: 'warn',
+	colorize: true,
+	timestamp: true,
+	json: false
 });/**/
 
 before(function (done) {
 	this.timeout(10000);
-	const	tasks	= [];
+	const tasks = [];
 
 	// Run DB Setup
 	tasks.push(function (cb) {
 		let confFile;
 
 		for (const args of process.argv) {
-			if (args.startsWith('-confFile=')){
+			if (args.startsWith('-confFile=')) {
 				confFile = args.split('=')[1];
 			}
 		}
 
-		if ( ! confFile) confFile = __dirname + '/../config/db_test.json';
+		if (!confFile) confFile = __dirname + '/../config/db_test.json';
 
 		log.verbose('DB config file: "' + confFile + '"');
 
 		// First look for absolute path
 		fs.stat(confFile, function (err) {
 			if (err) {
-
 				// Then look for this string in the config folder
 				confFile = __dirname + '/../config/' + confFile;
 				fs.stat(confFile, function (err) {
@@ -77,14 +79,13 @@ before(function (done) {
 
 	// Load lib
 	tasks.push(function (cb) {
-		blogLib	= require(__dirname + '/../blog.js');
-		blogLib.dataWriter.mode	= 'master';
-		blogLib.dataWriter.intercom	= new Intercom('loopback interface');
-		cb();
-	});
-
-	tasks.push(function (cb) {
-		blogLib.dataWriter.ready(cb);
+		blogLib = new Blog({
+			mode: 'noSync',
+			intercom: new Intercom('loopback interface'),
+			db,
+			log,
+			lUtils
+		}, cb);
 	});
 
 	async.series(tasks, done);
@@ -106,27 +107,30 @@ describe('Sanity test', function () {
 
 describe('Create blog post', function () {
 	it('Some regular blog postin\'', function (done) {
-		const tasks	= [],
-			entry = {
-				'langs'	: {
-					'en' : {
-						'slug'	: moment().format('YYYY-MM-DD_') + slugify('Bacon, oh, sweet bacon', '-'),
-						'tags'	: 'Taaags,Baags,Bag ladies,Bacon',
-						'header'	: 'The second comming of the lord of bacon',
-						'summary'	: 'All hail the lord of bacon!',
-						'body'	: 'I love bacon, everybody loves bacon.'
-					}
-				},
-				'published'	: moment().subtract(1, 'hours').toDate(), // I HATE TIMEZONES
-				'uuid'	: entryUuid
-			};
+		const tasks = [];
+
+
+		const entry = {
+			langs: {
+				en: {
+					slug: moment().format('YYYY-MM-DD_') + slugify('Bacon, oh, sweet bacon', '-'),
+					tags: 'Taaags,Baags,Bag ladies,Bacon',
+					header: 'The second comming of the lord of bacon',
+					summary: 'All hail the lord of bacon!',
+					body: 'I love bacon, everybody loves bacon.'
+				}
+			},
+			published: moment().subtract(1, 'hours')
+				.toDate(), // I HATE TIMEZONES
+			uuid: entryUuid
+		};
 
 		tasks.push(function (cb) {
 			blogLib.saveEntry(entry, cb);
 		});
 
 		tasks.push(function (cb) {
-			blogLib.getEntries({'uuids': entry.uuid}, function (err, entries) {
+			blogLib.getEntries({uuids: entry.uuid}, function (err, entries) {
 				assert.strictEqual(err === null, true);
 				assert.strictEqual(entries.length, 1);
 				assert.strictEqual(entries[0].langs.en.slug, entry.langs.en.slug);
@@ -142,27 +146,30 @@ describe('Create blog post', function () {
 	});
 
 	it('Create a second post', function (done) {
-		const tasks	= [],
-			entry = {
-				'langs'	: {
-					'en' : {
-						'slug'	: moment().format('YYYY-MM-DD_') + slugify('One bottle of beer on the wall', '-'),
-						'tags'	: 'Beer,Bacon,Moar beer',
-						'header'	: 'Its all about the beer',
-						'summary'	: 'All hail the lord of beer!',
-						'body'	: 'I love beer, everybody loves beer.'
-					}
-				},
-				'published'	: moment().subtract(1, 'hours').toDate(), // fucking timezones
-				'uuid'	: entryUuid2
-			};
+		const tasks = [];
+
+
+		const entry = {
+			langs: {
+				en: {
+					slug: moment().format('YYYY-MM-DD_') + slugify('One bottle of beer on the wall', '-'),
+					tags: 'Beer,Bacon,Moar beer',
+					header: 'Its all about the beer',
+					summary: 'All hail the lord of beer!',
+					body: 'I love beer, everybody loves beer.'
+				}
+			},
+			published: moment().subtract(1, 'hours')
+				.toDate(), // Fucking timezones
+			uuid: entryUuid2
+		};
 
 		tasks.push(function (cb) {
 			blogLib.saveEntry(entry, cb);
 		});
 
 		tasks.push(function (cb) {
-			blogLib.getEntries({'uuids': entry.uuid}, function (err, entries) {
+			blogLib.getEntries({uuids: entry.uuid}, function (err, entries) {
 				assert.strictEqual(err === null, true);
 				assert.strictEqual(entries.length, 1);
 				assert.strictEqual(entries[0].langs.en.slug, entry.langs.en.slug);
@@ -178,27 +185,30 @@ describe('Create blog post', function () {
 	});
 
 	it('Update previous post', function (done) {
-		const tasks	= [],
-			entry = {
-				'langs'	: {
-					'en' : {
-						'slug'	: moment().format('YYYY-MM-DD_') + slugify('One bottle of beer on the floor', '-'),
-						'tags'	: 'Beer,Bacon,Moar beer,Ham',
-						'header'	: 'Its all about the beer',
-						'summary'	: 'All hail the lord of beer!',
-						'body'	: 'I love beer, but not everybody loves beer.'
-					}
-				},
-				'published'	: moment().subtract(3, 'hours').toDate(), // fucking timezones
-				'uuid'	: entryUuid2
-			};
+		const tasks = [];
+
+
+		const entry = {
+			langs: {
+				en: {
+					slug: moment().format('YYYY-MM-DD_') + slugify('One bottle of beer on the floor', '-'),
+					tags: 'Beer,Bacon,Moar beer,Ham',
+					header: 'Its all about the beer',
+					summary: 'All hail the lord of beer!',
+					body: 'I love beer, but not everybody loves beer.'
+				}
+			},
+			published: moment().subtract(3, 'hours')
+				.toDate(), // Fucking timezones
+			uuid: entryUuid2
+		};
 
 		tasks.push(function (cb) {
 			blogLib.saveEntry(entry, cb);
 		});
 
 		tasks.push(function (cb) {
-			blogLib.getEntries({'uuids': entry.uuid}, function (err, entries) {
+			blogLib.getEntries({uuids: entry.uuid}, function (err, entries) {
 				assert.strictEqual(err === null, true);
 				assert.strictEqual(entries.length, 1);
 				assert.strictEqual(entries[0].langs.en.slug, entry.langs.en.slug);
@@ -215,17 +225,18 @@ describe('Create blog post', function () {
 
 	it('Dont save entry when slugs already exists', function (done) {
 		const entry = {
-			'langs'	: {
-				'en' : {
-					'slug'	: moment().format('YYYY-MM-DD_') + slugify('One bottle of beer on the floor', '-'),
-					'tags'	: 'Beer,Bacon,Moar beer',
-					'header'	: 'Its not about the beer',
-					'summary'	: 'You\'re wrong!!',
-					'body'	: 'I hate beer, no one loves beer.'
+			langs: {
+				en: {
+					slug: moment().format('YYYY-MM-DD_') + slugify('One bottle of beer on the floor', '-'),
+					tags: 'Beer,Bacon,Moar beer',
+					header: 'Its not about the beer',
+					summary: 'You\'re wrong!!',
+					body: 'I hate beer, no one loves beer.'
 				}
 			},
-			'published'	: moment().subtract(1, 'hours').toDate(), // fucking timezones
-			'uuid'	: entryUuid3
+			published: moment().subtract(1, 'hours')
+				.toDate(), // Fucking timezones
+			uuid: entryUuid3
 		};
 
 		blogLib.saveEntry(entry, function (err) {
@@ -235,27 +246,29 @@ describe('Create blog post', function () {
 	});
 
 	it('Edit blog post', function (done) {
-		const tasks	= [],
-			entry = {
-				'langs'	: {
-					'en' : {
-						'slug'	: moment().format('YYYY-MM-DD_') + slugify('Bacon, oh, sweet bacon', '-'),
-						'tags'	: 'Updated tags, bags',
-						'header'	: 'The second comming of the lord of bacon',
-						'summary'	: 'All hail the lord of bacon!',
-						'body'	: 'I love bacon, everybody loves bacon.'
-					}
-				},
-				'published'	: moment().toDate(),
-				'uuid'	: entryUuid
-			};
+		const tasks = [];
+
+
+		const entry = {
+			langs: {
+				en: {
+					slug: moment().format('YYYY-MM-DD_') + slugify('Bacon, oh, sweet bacon', '-'),
+					tags: 'Updated tags, bags',
+					header: 'The second comming of the lord of bacon',
+					summary: 'All hail the lord of bacon!',
+					body: 'I love bacon, everybody loves bacon.'
+				}
+			},
+			published: moment().toDate(),
+			uuid: entryUuid
+		};
 
 		tasks.push(function (cb) {
 			blogLib.saveEntry(entry, cb);
 		});
 
 		tasks.push(function (cb) {
-			blogLib.getEntries({'uuids': entry.uuid}, function (err, entries) {
+			blogLib.getEntries({uuids: entry.uuid}, function (err, entries) {
 				assert.strictEqual(err === null, true);
 				assert.strictEqual(entries.length, 1);
 				cb();
@@ -267,15 +280,13 @@ describe('Create blog post', function () {
 });
 
 
-
-
 describe('Search', function () {
 	it('do the full text search', function (done) {
 		blogLib.search('beer', function (err, uuids) {
 			if (err) throw err;
 			assert.strictEqual(uuids.length, 1);
 
-			blogLib.getEntries({'uuids': uuids}, function (err, entries) {
+			blogLib.getEntries({uuids: uuids}, function (err, entries) {
 				assert.strictEqual(entries[0].langs.en.header, 'Its all about the beer');
 				done();
 			});
@@ -286,7 +297,6 @@ describe('Search', function () {
 describe('Get entries', function () {
 	it('Get some old entries', function (done) {
 		blogLib.getEntries(function (err, entries) {
-
 			assert.strictEqual(err === null, true);
 			assert.strictEqual(entries.length, 2);
 
@@ -306,7 +316,7 @@ describe('Add images to entry', function () {
 		const tasks = [];
 
 		tasks.push(function (cb) {
-			blogLib.getEntries({'uuids': entryUuid}, function (err, entries) {
+			blogLib.getEntries({uuids: entryUuid}, function (err, entries) {
 				assert.strictEqual(err, null);
 				assert.strictEqual(entries.length, 1);
 				assert.strictEqual(entries[0].images, null);
@@ -315,11 +325,11 @@ describe('Add images to entry', function () {
 		});
 
 		tasks.push(function (cb) {
-			blogLib.setImages({'uuid': entryUuid, 'images': [{'number': 1, 'uri': '/some/image/file.png'}]}, cb);
+			blogLib.setImages({uuid: entryUuid, images: [{number: 1, uri: '/some/image/file.png'}]}, cb);
 		});
 
 		tasks.push(function (cb) {
-			blogLib.getEntries({'uuids': entryUuid}, function (err, entries) {
+			blogLib.getEntries({uuids: entryUuid}, function (err, entries) {
 				assert.strictEqual(err, null);
 				assert.strictEqual(entries.length, 1);
 				assert.strictEqual(entries[0].images, '/some/image/file.png');
@@ -331,13 +341,12 @@ describe('Add images to entry', function () {
 	});
 
 	it('Add an additional image', function (done) {
-
-		const tasks	= [];
+		const tasks = [];
 
 		let image = null;
 
 		tasks.push(function (cb) {
-			blogLib.getEntries({'uuids': entryUuid}, function (err, entries) {
+			blogLib.getEntries({uuids: entryUuid}, function (err, entries) {
 				assert.strictEqual(err, null);
 				assert.strictEqual(entries.length, 1);
 				assert.notStrictEqual(entries[0].images, null);
@@ -347,11 +356,11 @@ describe('Add images to entry', function () {
 		});
 
 		tasks.push(function (cb) {
-			blogLib.setImages({'uuid': entryUuid, 'images': [{'number': 1, 'uri': image}, {'number': 2, 'uri': '/some/other/uri.jpeg'}]}, cb);
+			blogLib.setImages({uuid: entryUuid, images: [{number: 1, uri: image}, {number: 2, uri: '/some/other/uri.jpeg'}]}, cb);
 		});
 
 		tasks.push(function (cb) {
-			blogLib.getEntries({'uuids': entryUuid}, function (err, entries) {
+			blogLib.getEntries({uuids: entryUuid}, function (err, entries) {
 				assert.strictEqual(err, null);
 				assert.strictEqual(entries.length, 1);
 				assert.notStrictEqual(entries[0].images, undefined);
@@ -367,11 +376,11 @@ describe('Add images to entry', function () {
 		const tasks = [];
 
 		tasks.push(function (cb) {
-			blogLib.setImages({'uuid': entryUuid}, cb);
+			blogLib.setImages({uuid: entryUuid}, cb);
 		});
 
 		tasks.push(function (cb) {
-			blogLib.getEntries({'uuids': entryUuid}, function (err, entries) {
+			blogLib.getEntries({uuids: entryUuid}, function (err, entries) {
 				assert.strictEqual(err, null);
 				assert.strictEqual(entries.length, 1);
 				assert.strictEqual(entries[0].images, null);
@@ -392,7 +401,7 @@ describe('Remove entry', function () {
 		});
 
 		tasks.push(function (cb) {
-			blogLib.getEntries({'uuid': entryUuid}, function (err, entries) {
+			blogLib.getEntries({uuid: entryUuid}, function (err, entries) {
 				assert.strictEqual(err === null, true);
 				assert.strictEqual(entries.length, 1);
 				assert.strictEqual(entries[0].uuid, entryUuid2);
