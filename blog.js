@@ -26,7 +26,7 @@ class Blog {
 		}
 
 		if (!this.exchangeName) {
-			this.exchangeName = 'larvituser';
+			this.exchangeName = 'larvitblog';
 		}
 
 		if (!this.mode) {
