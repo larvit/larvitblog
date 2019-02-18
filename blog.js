@@ -8,6 +8,8 @@ const LUtils = require('larvitutils');
 
 class Blog {
 	constructor(options, cb) {
+		const logPrefix = topLogPrefix + 'constructor() - ';
+
 		this.options = options || {};
 
 		if (!options.db) throw new Error('Missing required option "db"');
