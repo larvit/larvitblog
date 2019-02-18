@@ -3,6 +3,7 @@
 
 const topLogPrefix = 'larvitblog: blog.js: ';
 const DataWriter = require(__dirname + '/dataWriter.js');
+const Intercom = require('larvitamintercom');
 const LUtils = require('larvitutils');
 
 class Blog {
