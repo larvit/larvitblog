@@ -18,7 +18,7 @@
     "larvitutils": "^2.1.0",
     "lodash": "^4.17.4",
     "uuid": "^3.0.1",
-    "winston": "^2.3.1"
+    "winston": "^3.0.0"
   },
   "description": "Simple blog module with admin GUI for larvitadmingui",
   "devDependencies": {
