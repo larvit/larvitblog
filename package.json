@@ -22,10 +22,10 @@
   },
   "description": "Simple blog module with admin GUI for larvitadmingui",
   "devDependencies": {
-    "eslint": "^5.13.0",
-    "mocha": "^5.1.1",
-    "mocha-eslint": "^5.0.0",
-    "moment": "^2.18.1"
+    "eslint": "5.16.0",
+    "mocha": "5.2.0",
+    "mocha-eslint": "5.0.0",
+    "moment": "2.24.0"
   },
   "keywords": [
     "blog"
