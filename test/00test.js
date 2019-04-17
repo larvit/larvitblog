@@ -11,7 +11,6 @@ const assert = require('assert');
 const async = require('async');
 const log = new lUtils.Log('warn');
 const db = require('larvitdb');
-const fs = require('fs');
 
 let entryUuid = uuidLib.v1();
 let entryUuid2 = uuidLib.v1();
@@ -26,33 +25,14 @@ before(function (done) {
 	tasks.push(function (cb) {
 		let confFile;
 
-		for (const args of process.argv) {
-			if (args.startsWith('-confFile=')) {
-				confFile = args.split('=')[1];
-			}
+		if (process.env.TRAVIS) {
+			confFile = __dirname + '/../config/db_travis.json';
+		} else {
+			confFile = __dirname + '/../config/db_test.json';
 		}
 
-		if (!confFile) confFile = __dirname + '/../config/db_test.json';
-
-		log.verbose('DB config file: "' + confFile + '"');
-
-		// First look for absolute path
-		fs.stat(confFile, function (err) {
-			if (err) {
-				// Then look for this string in the config folder
-				confFile = __dirname + '/../config/' + confFile;
-				fs.stat(confFile, function (err) {
-					if (err) throw err;
-					log.verbose('DB config: ' + JSON.stringify(require(confFile)));
-					db.setup(require(confFile), cb);
-				});
-
-				return;
-			}
-
-			log.verbose('DB config: ' + JSON.stringify(require(confFile)));
-			db.setup(require(confFile), cb);
-		});
+		log.verbose('DB config file: "' + confFile + '", with contents: ' + JSON.stringify(require(confFile)));
+		db.setup(require(confFile), cb);
 	});
 
 	// Check for empty db
