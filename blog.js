@@ -7,6 +7,22 @@ const Intercom = require('larvitamintercom');
 const LUtils = require('larvitutils');
 
 class Blog {
+
+	/**
+	 * Constructor
+	 *
+	 * @param {object} options - construct options
+	 * @param {object} options.db - Database instance
+	 * @param {string} [options.exchangeName] - Default "larvitblog" - Used as communication channel for larvitamintercom
+	 * @param {string} [options.mode] - Default "noSync" - What sync mode to be used on the intercom
+	 * @param {object} [options.intercom] - Larvitamintercom instance
+	 * @param {object} [options.log] - Logging instance
+	 * @param {object} [options.lUtils] - Larvitutils instance
+	 * @param {string} [options.amsync_host] - Default: null
+	 * @param {integer} [options.amsync_minPort] - Default: null
+	 * @param {integer} [options.amsync_maxPort] - Default: null
+	 * @param {function} [cb] - Callback function
+	 */
 	constructor(options, cb) {
 		const logPrefix = topLogPrefix + 'constructor() - ';
 
@@ -14,13 +30,13 @@ class Blog {
 
 		if (!options.db) throw new Error('Missing required option "db"');
 
-		if (!options.lUtils) options.lUtils = new LUtils();
-
 		if (!this.options.log) {
 			const lUtils = new LUtils();
 
 			this.options.log = new lUtils.Log();
 		}
+
+		if (!options.lUtils) options.lUtils = new LUtils({log: this.options.log});
 
 		this.log = this.options.log;
 
@@ -59,6 +75,21 @@ class Blog {
 		}, cb);
 	}
 
+	/**
+	 * Get entries
+	 *
+	 * @param {object} [options] - What options to use
+	 * @param {Date} [options.publishedAfter] -
+	 * @param {Date} [options.publishedBefore] -
+	 * @param {Array} [options.langs] - Array of strings
+	 * @param {Array} [options.uuids] - Array of strings
+	 * @param {Array} [options.slugs] - Array of strings
+	 * @param {Array} [options.tags] - Array of strings
+	 * @param {integer} [options.limit] - Default: 10
+	 * @param {integer} [options.offset] -
+	 * @param {function} cb - Calback
+	 * @returns {undefined} - Nothing (of value)
+	 */
 	getEntries(options, cb) {
 		const logPrefix = topLogPrefix + 'getEntries() - ';
 		const dbFields = [];
@@ -168,11 +199,11 @@ class Blog {
 				const buffer = this.lUtils.uuidToBuffer(options.uuids[i]);
 
 				if (buffer === false) {
-					const e = new Error('Invalid blog uuid');
+					const err = new Error('Invalid blog uuid');
 
-					log.warn(logPrefix + e.message);
+					log.warn(logPrefix + err.message);
 
-					return cb(e);
+					return cb(err);
 				}
 
 				sql += '?,';
@@ -251,6 +282,11 @@ class Blog {
 		});
 	};
 
+	/**
+	 * Get tags
+	 *
+	 * @param {function} cb - Callback
+	 */
 	getTags(cb) {
 		let sql = 'SELECT COUNT(entryUuid) AS posts, lang, content FROM blog_entriesDataTags GROUP BY lang, content ORDER BY lang, COUNT(entryUuid) DESC;';
 
@@ -276,6 +312,12 @@ class Blog {
 		});
 	};
 
+	/**
+	 * Remove a blog post
+	 *
+	 * @param {string} uuid - The uuid of the post to be removed
+	 * @param {function} cb - Callback
+	 */
 	rmEntry(uuid, cb) {
 		const options = {exchange: this.exchangeName};
 		const message = {};
@@ -292,6 +334,14 @@ class Blog {
 		});
 	};
 
+	/**
+	 * Remove image
+	 *
+	 * @param {object} options - What to be removed
+	 * @param {string} options.uuid - The uuid to be removed
+	 * @param {integer} options.imgNr - The imageNr to be removed
+	 * @param {function} cb - The callback
+	 */
 	rmImage(options, cb) {
 		const message = {};
 
@@ -307,6 +357,12 @@ class Blog {
 		});
 	}
 
+	/**
+	 * Save blog entry
+	 *
+	 * @param {object} data - Entry data to be saved
+	 * @param {function} cb - Callback
+	 */
 	saveEntry(data, cb) {
 		const options = {exchange: this.exchangeName};
 		const message = {};
@@ -323,6 +379,12 @@ class Blog {
 		});
 	}
 
+	/**
+	 * Set images
+	 *
+	 * @param {object} data -
+	 * @param {function} cb - The callback
+	 */
 	setImages(data, cb) {
 		const options = {exchange: this.exchangeName};
 		const message = {};
@@ -339,6 +401,14 @@ class Blog {
 		});
 	};
 
+	/**
+	 * Search for a blog post
+	 *
+	 * @param {object/string} options - In case of string, will be used as options.searchText
+	 * @param {string} [options.searchText] - What text to search for
+	 * @param {Array} [options.tags] - Array of strings
+	 * @param {function} cb - The callback
+	 */
 	search(options, cb) {
 		const logPrefix = topLogPrefix + 'search() - ';
 		const dbFields = [];

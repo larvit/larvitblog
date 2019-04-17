@@ -9,7 +9,7 @@ const uuidLib = require('uuid');
 const moment = require('moment');
 const assert = require('assert');
 const async = require('async');
-const log = require('winston');
+const log = new lUtils.Log('warn');
 const db = require('larvitdb');
 const fs = require('fs');
 
@@ -17,15 +17,6 @@ let entryUuid = uuidLib.v1();
 let entryUuid2 = uuidLib.v1();
 let entryUuid3 = uuidLib.v1();
 let blogLib;
-
-// Set up winsston
-log.remove(log.transports.Console);
-/**/log.add(log.transports.Console, {
-	level: 'warn',
-	colorize: true,
-	timestamp: true,
-	json: false
-});/**/
 
 before(function (done) {
 	this.timeout(10000);
