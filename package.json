@@ -11,7 +11,7 @@
     "async": "^2.1.4",
     "larvitamintercom": "^0.3.4",
     "larvitamsync": "^0.7.3",
-    "larvitdb": "^2.1.1",
+    "larvitdb": "^3.0.0",
     "larvitdbmigration": "^4.0.2",
     "larvitimages": "^0.10.6",
     "larvitslugify": "^0.11.2",
