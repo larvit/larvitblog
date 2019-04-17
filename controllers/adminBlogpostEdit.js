@@ -4,7 +4,6 @@ const topLogPrefix = 'larvitblog: ./controllers/adminBlogpostEdit.js: ';
 const slugify = require('larvitslugify');
 const uuidLib = require('uuid');
 const moment = require('moment');
-const lUtils = require('larvitutils');
 const async = require('async');
 const _ = require('lodash');
 
@@ -36,7 +35,7 @@ exports.run = function run(req, res, cb) {
 
 				for (const i of images) {
 					postImages.push({
-						uuid: lUtils.formatUuid(i.uuid),
+						uuid: req.lUtils.formatUuid(i.uuid),
 						slug: i.slug,
 						uri: i.slug,
 						number: i.slug.match(/blog_entry_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}_image_(\d)\.\w+/)[1]
