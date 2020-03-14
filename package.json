@@ -17,7 +17,7 @@
     "larvitslugify": "^0.11.2",
     "larvitutils": "^2.1.0",
     "lodash": "^4.17.4",
-    "uuid": "^3.0.1"
+    "uuid": "^7.0.0"
   },
   "description": "Simple blog module with admin GUI for larvitadmingui",
   "devDependencies": {
